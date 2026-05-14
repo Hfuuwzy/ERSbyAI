@@ -1,0 +1,61 @@
+# 85Boss 智能招聘平台 - Git忽略配置
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+
+# IDE配置
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# 前端依赖和构建
+vue/node_modules/
+vue/dist/
+vue/.vite/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# 后端依赖和构建
+springboot/target/
+springboot/.mvn/
+springboot/mvnw
+springboot/mvnw.cmd
+*.class
+*.jar
+*.war
+*.ear
+
+# 重复/废弃目录（可删除）
+demo/
+
+# 环境配置（包含敏感信息）
+*.env
+*.env.local
+.env.*.local
+
+# 临时文件
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# 数据库备份（大文件）
+*.sql.gz
+*.dump
+
+# 日志文件
+logs/
+*.log
+
+# 本地配置文件
+application-local.yml
+application-dev.yml
+
+# 上传文件（测试用的上传目录）
+files/
