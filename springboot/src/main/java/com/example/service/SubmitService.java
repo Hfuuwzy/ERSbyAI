@@ -30,6 +30,8 @@ public class SubmitService {
     private ResumeMapper resumeMapper;
     @Resource
     private PositionMapper positionMapper;
+    @Resource
+    private AiUtil aiUtil;
 
     public void add(Submit submit) {
         submit.setTime(DateUtil.now());
@@ -44,12 +46,12 @@ public class SubmitService {
         List<String> scoreMessageList = new ArrayList<>();
         scoreMessageList.add("我会给你一份简历信息和一份岗位信息，你帮我打个分，分数在0-100之间，你只需要返回分数即可，其他任何话都不要说，只返回分数的数字");
         scoreMessageList.add("简历信息为："+resume.toString()+",岗位信息为："+position.toString());
-        String aiScore = AiUtil.ai(scoreMessageList);
+        String aiScore = aiUtil.ai(scoreMessageList);
         submit.setAiScore(Integer.parseInt(aiScore.trim()));
         List<String> reviewMessageList = new ArrayList<>();
         reviewMessageList.add("我会给你一份简历信息和一份岗位信息，你帮我审核一下，你认为合不合格，合格你就返回合格，不合格你就返回不合格就行，要求可以不用特别严格，其他任何话都不要说");
         reviewMessageList.add("简历信息为："+resume.toString()+",岗位信息为："+position.toString());
-        String aiReview = AiUtil.ai(reviewMessageList);
+        String aiReview = aiUtil.ai(reviewMessageList);
         submit.setAiReview(aiReview.trim());
         submit.setStatus("不合格".equals(submit.getAiReview())?"不适合":"通过");
         submitMapper.insert(submit);

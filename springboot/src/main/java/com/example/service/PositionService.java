@@ -42,6 +42,8 @@ public class PositionService {
     private SubmitMapper submitMapper;
     @Resource
     private ResumeMapper resumeMapper;
+    @Resource
+    private AiUtil aiUtil;
 
     public void add(Position position) {
         Account currentUser = TokenUtils.getCurrentUser();
@@ -57,7 +59,7 @@ public class PositionService {
             List<String> messageList = new ArrayList<>();
             messageList.add("我给你一些岗位信息，你帮我生成一份职位描述，其他任何内容都不要回复，格式是百度富文本格式，类似：<p style=\"line-height: 2;\"><span style=\"color: rgb(51, 51, 51); background-color: rgb(255, 255, 255); font-size: 15px;\">华为云数据库相关岗位，此岗位为OD岗位，入职后满足条件可转华为。</span></p><p style=\"line-height: 2;\"><span style=\"color: rgb(51, 51, 51); background-color: rgb(255, 255, 255); font-size: 15px;\"><br>【岗位职责】<br>1. 负责华为云数据库的测试设计、测试验证与交付工作,保证产品高质量发布。<br>2. 负责华为云数据库的测试架构设计和开发,支撑自动化测试,提升测试质量和效率。<br>3. 支撑负责华为云数据库的性能/过载测试、可靠性/混沌测试、安全测试、客户化测试等。</span></p><p style=\"line-height: 2;\"><span style=\"color: rgb(51, 51, 51); background-color: rgb(255, 255, 255); font-size: 15px;\"><br>【技能要求】<br>1. 熟悉测试基本的技术和方法,包括测试设计、测试执行、测试分析、测试工具、测试仿真、故障注入、自动化等。<br>2. 熟练掌握测试需求分析和设计方法,熟悉黑白盒测试流程,熟悉常见缺陷管理工具。<br>3. 熟悉自动化脚本的开发,熟练使用常用的自动化测试框架,具备独立的问题定位分析能力。<br>4. 有强烈的责任心和使命感,具备良好的沟通能力和团队合作意识。<br>5. 至少熟悉一种编程语言C、C++、java、Python、Go、shell等。</span></p>");
             messageList.add("岗位信息："+position.toString());
-            position.setContent(AiUtil.ai(messageList).trim());
+            position.setContent(aiUtil.ai(messageList).trim());
         }
         positionMapper.insert(position);
     }
@@ -196,7 +198,7 @@ public class PositionService {
             sb.append(t.toString()+",");
         });
         messageList.add(sb.toString());
-        String ids = AiUtil.ai(messageList).trim();
+        String ids = aiUtil.ai(messageList).trim();
         if(StrUtil.isBlank(ids)){
             return Result.success();
         }else{
