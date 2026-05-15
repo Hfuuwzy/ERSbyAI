@@ -1,8 +1,10 @@
 package com.example.entity;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
+@EqualsAndHashCode(callSuper = false)
 public class Employ extends Account{
     private Integer id;
     private String username;
