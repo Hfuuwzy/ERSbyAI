@@ -57,5 +57,8 @@ logs/
 application-local.yml
 application-dev.yml
 
+# Git工作树目录
+.worktrees/
+
 # 上传文件（测试用的上传目录）
 files/
