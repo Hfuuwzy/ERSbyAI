@@ -4,52 +4,66 @@ import com.volcengine.ark.runtime.model.completion.chat.ChatCompletionRequest;
 import com.volcengine.ark.runtime.model.completion.chat.ChatMessage;
 import com.volcengine.ark.runtime.model.completion.chat.ChatMessageRole;
 import com.volcengine.ark.runtime.service.ArkService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * @version: 1.00.00
- * @description: Ai工具类
- * @date: 2025/5/9 22:06
+ * AI工具类
+ * 用于调用火山引擎 DeepSeek API 进行简历筛选和评估
  */
+@Component
 public class AiUtil {
 
-    public static String ai(List<String> list){
-        StringBuilder sb = new StringBuilder();
-        // 从环境变量中获取API密钥
-        String apiKey = "eb9000bd-1357-4635-a826-f11920f596ef";
-        // 创建ArkService实例
-        ArkService arkService = ArkService.builder().apiKey(apiKey).build();
-        // 初始化消息列表
-        List<ChatMessage> chatMessages = new ArrayList<>();
-        // 将用户消息添加到消息列表
-        for (int i=0;i<list.size();i++){
-            ChatMessage userMessage = ChatMessage.builder()
-                    .role(ChatMessageRole.USER) // 设置消息角色为用户
-                    .content(list.get(i)) // 设置消息内容
-                    .build();
-            chatMessages.add(userMessage);
+    @Value("${ai.api-key}")
+    private String apiKey;
+
+    @Value("${ai.model:deepseek-r1-250120}")
+    private String model;
+
+    /**
+     * 调用 AI 服务进行对话
+     *
+     * @param list 对话消息列表
+     * @return AI 返回的文本内容
+     */
+    public String ai(List<String> list) {
+        // 验证 API Key 是否配置
+        if (apiKey == null || apiKey.isEmpty()) {
+            throw new IllegalStateException("AI API Key 未配置。请在 application-local.yml 中配置 ai.api-key 或设置 AI_API_KEY 环境变量。");
         }
-        // 创建聊天完成请求
-        ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest.builder()
-                .model("deepseek-r1-250120")// 需要替换为Model ID
-                .messages(chatMessages) // 设置消息列表
-                .build();
-        // 发送聊天完成请求并打印响应
+
+        StringBuilder sb = new StringBuilder();
+        ArkService arkService = ArkService.builder().apiKey(apiKey).build();
+
         try {
-            // 获取响应并打印每个选择的消息内容
+            List<ChatMessage> chatMessages = new ArrayList<>();
+            for (String message : list) {
+                ChatMessage userMessage = ChatMessage.builder()
+                        .role(ChatMessageRole.USER)
+                        .content(message)
+                        .build();
+                chatMessages.add(userMessage);
+            }
+
+            ChatCompletionRequest chatCompletionRequest = ChatCompletionRequest.builder()
+                    .model(model)
+                    .messages(chatMessages)
+                    .build();
+
             arkService.createChatCompletion(chatCompletionRequest)
                     .getChoices()
-                    .forEach(choice ->sb.append(choice.getMessage().getContent()));
+                    .forEach(choice -> sb.append(choice.getMessage().getContent()));
+
         } catch (Exception e) {
-            System.out.println("请求失败: " + e.getMessage());
+            System.err.println("AI 请求失败: " + e.getMessage());
+            throw new RuntimeException("AI 服务调用失败: " + e.getMessage(), e);
         } finally {
-            // 关闭服务执行器
             arkService.shutdownExecutor();
         }
 
         return sb.toString();
     }
-
 }

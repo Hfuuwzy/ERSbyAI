@@ -1,0 +1,49 @@
+# 本地开发环境配置模板
+# 复制此文件为 application-local.yml 并填入真实值
+# 注意：application-local.yml 已加入 .gitignore，不会被提交到 Git
+
+# AI 配置（火山引擎 DeepSeek）
+ai:
+  # 从火山引擎控制台获取的 API Key
+  # 获取地址：https://console.volcengine.com/ark/
+  api-key: your_volcengine_api_key_here
+  
+  # 模型 ID
+  model: deepseek-r1-250120
+
+# 数据库配置（开发环境）
+spring:
+  datasource:
+    # 数据库主机
+    host: localhost
+    # 数据库端口
+    port: 3306
+    # 数据库名
+    name: xm-job
+    # 数据库用户名
+    username: root
+    # 数据库密码
+    password: your_database_password_here
+    # 完整 JDBC URL（自动生成，通常不需要修改）
+    url: jdbc:mysql://${spring.datasource.host}:${spring.datasource.port}/${spring.datasource.name}?useUnicode=true&characterEncoding=utf-8&allowMultiQueries=true&serverTimezone=Asia/Shanghai
+
+# 日志级别（开发环境可以开启 DEBUG）
+logging:
+  level:
+    com.example: DEBUG
+    org.springframework.web: DEBUG
+
+# 文件上传配置（开发环境）
+file:
+  upload:
+    # 上传文件存储路径（绝对路径或相对路径）
+    path: ./files
+    # 允许的最大文件大小（MB）
+    max-size: 10
+
+# JWT 配置（开发环境可以使用简单密钥）
+jwt:
+  # JWT 签名密钥（建议生产环境使用复杂随机字符串）
+  secret: your_jwt_secret_key_here
+  # Token 过期时间（小时）
+  expiration: 24
