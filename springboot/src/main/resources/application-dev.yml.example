@@ -1,0 +1,25 @@
+# 开发环境配置模板
+# 复制此文件为 application-dev.yml 并填入真实值
+# 注意：application-dev.yml 已加入 .gitignore，不会被提交到 Git
+
+# AI 配置
+ai:
+  # API 基础地址
+  base-url: https://kimi.a7m.com.cn/v1
+  # API Key（从商家购买或从环境变量读取）
+  api-key: ${KIMI_API_KEY:your_api_key_here}
+  # 模型名称
+  model: kimi-k2.6
+
+# 数据库配置
+spring:
+  datasource:
+    username: root
+    password: your_database_password_here
+
+# 日志级别
+logging:
+  level:
+    com.example: DEBUG
+    # 如需查看 SQL，取消下面的注释
+    # org.apache.ibatis: TRACE

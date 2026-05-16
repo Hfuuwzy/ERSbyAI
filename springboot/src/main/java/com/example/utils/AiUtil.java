@@ -21,10 +21,10 @@ public class AiUtil {
     @Value("${ai.api-key}")
     private String apiKey;
 
-    @Value("${ai.model:kimi-k2.6}")
+    @Value("${ai.model}")
     private String model;
 
-    @Value("${ai.base-url:https://kimi.a7m.com.cn/v1}")
+    @Value("${ai.base-url}")
     private String baseUrl;
 
     private final OkHttpClient client;
@@ -48,7 +48,7 @@ public class AiUtil {
     public String ai(List<String> list) {
         // 验证配置
         if (apiKey == null || apiKey.isEmpty()) {
-            throw new IllegalStateException("AI API Key 未配置。请在 application-local.yml 中配置 ai.api-key 或设置 KIMI_API_KEY 环境变量。");
+            throw new IllegalStateException("AI API Key 未配置。请在 application-dev.yml 中配置 ai.api-key 或设置 KIMI_API_KEY 环境变量。");
         }
 
         // 构建请求体
