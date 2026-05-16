@@ -22,5 +22,6 @@ fileBaseUrl: ${FILE_BASE_URL:http://localhost:${server.port}}
 uploadPath: ${UPLOAD_PATH:/data/uploads}
 
 ai:
+  base-url: ${AI_BASE_URL:https://kimi.a7m.com.cn/v1}
   api-key: ${AI_API_KEY}
-  model: ${AI_MODEL:deepseek-r1-250120}
+  model: ${AI_MODEL:kimi-k2.6}
