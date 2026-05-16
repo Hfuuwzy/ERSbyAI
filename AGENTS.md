@@ -4,34 +4,35 @@
 
 全栈智能招聘平台，集成AI简历筛选 + 协同过滤推荐算法。
 
-**技术栈**：Spring Boot 3.3 + Vue 3.4 + MySQL + DeepSeek AI
+**技术栈**：Spring Boot 3.3 + Vue 3.4 + MySQL + **kimi-k2.6 AI**
 
 ---
 
 ## 快速开始
 
-### 启动后端 (端口 9090)
+查看 [README.md](./README.md) 获取完整的快速开始指南。
 
-```bash
-cd springboot
-# 方式1: IDE运行 SpringbootApplication.java
-# 方式2: Maven
-mvn spring-boot:run
-```
+### 后端配置要点
 
-**数据库配置** (`springboot/src/main/resources/application.yml`):
-- 数据库: `xm-job` (MySQL)
-- 用户名: `root`
-- 密码: `123456`
-- SQL初始化: `xm-job.sql` (根目录)
+1. **复制配置模板**:
+   ```bash
+   cd springboot/src/main/resources
+   cp application-dev.yml.example application-dev.yml
+   ```
 
-### 启动前端 (端口 5173)
+2. **配置 AI Key** (`application-dev.yml`):
+   ```yaml
+   ai:
+     base-url: https://kimi.a7m.com.cn/v1
+     api-key: your_kimi_api_key_here
+     model: kimi-k2.6
+   ```
 
-```bash
-cd vue
-npm install
-npm run dev
-```
+3. **启动**:
+   ```bash
+   cd springboot
+   mvn spring-boot:run
+   ```
 
 ---
 
@@ -92,13 +93,14 @@ router/index.js                   # 路由配置 (24个路由)
 
 ## 特殊依赖说明
 
-### AI能力 (DeepSeek R1)
+### AI能力 (kimi-k2.6)
 
 **文件**: `springboot/src/main/java/com/example/utils/AiUtil.java`
 
-- 使用字节跳动火山引擎 ARK SDK
-- 模型: `deepseek-r1-250120`
-- ⚠️ **硬编码API Key** (安全漏洞，需移到配置)
+- 使用 OpenAI 兼容格式调用 kimi API
+- HTTP 客户端: OkHttp + Gson
+- 模型: `kimi-k2.6`
+- ✅ **配置外置** - API Key 存储于 `application-dev.yml` 或环境变量
 
 ### 协同过滤推荐
 
@@ -124,18 +126,17 @@ router/index.js                   # 路由配置 (24个路由)
 
 ### 安全事项 🔒
 
-1. **AI API Key硬编码** (`AiUtil.java` 第21行)
-   ```java
-   String apiKey = "eb9000bd-..."  // ❌ 硬编码
-   ```
-   应改为: `application.yml` 配置 + `@Value` 注入
-
-2. **前端路由跳转使用 `location.href`** (非SPA方式)
+1. **前端路由跳转使用 `location.href`** (非SPA方式)
    ```javascript
    // vue/src/views/front/Home.vue
    location.href = '/front/search?name=' + data.name  // ❌
    // 建议: router.push('/front/search?name=' + data.name)
    ```
+
+### 配置文件
+
+- `application-dev.yml` - 开发环境配置（已加入 .gitignore）
+- `application-dev.yml.example` - 配置模板（可提交）
 
 ### 状态管理
 
