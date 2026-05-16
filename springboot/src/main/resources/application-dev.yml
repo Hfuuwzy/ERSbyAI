@@ -20,5 +20,7 @@ mybatis:
 fileBaseUrl: http://localhost:${server.port}
 
 ai:
-  api-key: ${AI_API_KEY:your_test_api_key_here}
-  model: deepseek-r1-250120
+  base-url: https://kimi.a7m.com.cn/v1
+  api-key: sk-LYthgalkHTaJ2F3HfSNXR7rBy9z8f3zTK6bYMTM7UPSId2NO
+  model: kimi-k2.6
+

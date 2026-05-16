@@ -1,11 +1,14 @@
 <template>
-  <button class="gradient-button" :class="{ 'secondary': variant === 'secondary' }" @click="$emit('click')">
+  <button :type="type || 'button'" class="gradient-button" :class="{ 'secondary': variant === 'secondary' }" @click="$emit('click')">
     <slot></slot>
   </button>
 </template>
 
 <script setup>
-defineProps({ variant: { type: String, default: 'primary' } })
+defineProps({ 
+  variant: { type: String, default: 'primary' },
+  type: { type: String, default: 'button' }
+})
 defineEmits(['click'])
 </script>
 

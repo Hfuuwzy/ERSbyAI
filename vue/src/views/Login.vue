@@ -5,7 +5,7 @@
       <h1 class="auth-title">欢迎回来</h1>
       <p class="auth-subtitle">登录你的 85Boss 账号</p>
 
-      <el-form ref="formRef" :model="data.form" :rules="data.rules" @keyup.enter="login">
+      <el-form ref="formRef" :model="data.form" :rules="data.rules" @submit.prevent="login" @keyup.enter="login">
         <el-form-item prop="username">
           <el-input
             v-model="data.form.username"
@@ -32,7 +32,7 @@
           </el-select>
         </el-form-item>
         <el-form-item>
-          <GradientButton class="submit-btn" @click="login">登 录</GradientButton>
+          <GradientButton type="button" class="submit-btn" @click="login">登 录</GradientButton>
         </el-form-item>
       </el-form>
 
@@ -54,7 +54,11 @@ import GlassCard from "@/components/GlassCard.vue"
 import GradientButton from "@/components/GradientButton.vue"
 
 const data = reactive({
-  form: {},
+  form: {
+    username: '',
+    password: '',
+    role: ''
+  },
   rules: {
     username: [
       { required: true, message: '请输入账号', trigger: 'blur' }
@@ -74,20 +78,45 @@ const login = () => {
   formRef.value.validate(valid => {
     if (valid) {
       request.post('/login', data.form).then(res => {
-        if (res.code === '200') {
+        if (res.code == '200' || res.code === 200) {
           ElMessage.success('登录成功')
           localStorage.setItem('xm-user', JSON.stringify(res.data))
+          
+          let targetPath = '/front/home'
           if (res.data.role === 'EMPLOY') {
-            router.push('/manager/position')
+            targetPath = '/manager/position'
           } else if (res.data.role === 'ADMIN') {
-            router.push('/manager/home')
-          } else {
-            router.push('/front/home')
+            targetPath = '/manager/home'
           }
+          
+          router.push(targetPath)
         } else {
-          ElMessage.error(res.msg)
+          ElMessage.error(res.msg || '登录失败')
         }
+      }).catch(err => {
+        ElMessage.error('登录请求失败，请检查网络')
       })
+    }
+  })
+}
+          
+          console.log('目标路径:', targetPath)
+          router.push(targetPath).then(() => {
+            console.log('跳转成功!')
+          }).catch(err => {
+            console.error('跳转失败:', err)
+            ElMessage.error('页面跳转失败: ' + err.message)
+          })
+        } else {
+          console.error('登录失败:', res.msg)
+          ElMessage.error(res.msg || '登录失败')
+        }
+      }).catch(err => {
+        console.error('请求失败:', err)
+        ElMessage.error('登录请求失败，请检查网络')
+      })
+    } else {
+      console.log('表单验证失败')
     }
   })
 }
