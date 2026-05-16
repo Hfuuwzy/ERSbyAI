@@ -43,18 +43,32 @@ public class SubmitService {
         //进行ai打分和审核
         Resume resume = resumeMapper.selectById(submit.getResumeId());
         Position position = positionMapper.selectById(submit.getPositionId());
-        List<String> scoreMessageList = new ArrayList<>();
-        scoreMessageList.add("我会给你一份简历信息和一份岗位信息，你帮我打个分，分数在0-100之间，你只需要返回分数即可，其他任何话都不要说，只返回分数的数字");
-        scoreMessageList.add("简历信息为："+resume.toString()+",岗位信息为："+position.toString());
+        List<String> scoreMessageList = buildScoreMessages(resume, position);
         String aiScore = aiUtil.ai(scoreMessageList);
         submit.setAiScore(Integer.parseInt(aiScore.trim()));
-        List<String> reviewMessageList = new ArrayList<>();
-        reviewMessageList.add("我会给你一份简历信息和一份岗位信息，你帮我审核一下，你认为合不合格，合格你就返回合格，不合格你就返回不合格就行，要求可以不用特别严格，其他任何话都不要说");
-        reviewMessageList.add("简历信息为："+resume.toString()+",岗位信息为："+position.toString());
+        List<String> reviewMessageList = buildReviewMessages(resume, position);
         String aiReview = aiUtil.ai(reviewMessageList);
         submit.setAiReview(aiReview.trim());
         submit.setStatus("不合格".equals(submit.getAiReview())?"不适合":"通过");
         submitMapper.insert(submit);
+    }
+
+    private List<String> buildScoreMessages(Resume resume, Position position) {
+        List<String> messages = new ArrayList<>();
+        messages.add("你是招聘平台的简历匹配评分助手。请基于候选人简历和岗位要求进行匹配评分，评分范围为0-100。匹配维度包括学历要求、工作年限、技能标签、项目经验和岗位职责相关性。只返回一个整数，不要返回解释、单位或其他文本。");
+        messages.add(buildResumePositionContext(resume, position));
+        return messages;
+    }
+
+    private List<String> buildReviewMessages(Resume resume, Position position) {
+        List<String> messages = new ArrayList<>();
+        messages.add("你是招聘平台的简历初筛助手。请基于候选人简历和岗位要求判断是否进入下一轮。只返回其中一个词：合格 或 不合格。不要返回原因、标点或其他文本。");
+        messages.add(buildResumePositionContext(resume, position));
+        return messages;
+    }
+
+    private String buildResumePositionContext(Resume resume, Position position) {
+        return "候选人简历：" + resume + "\n岗位要求：" + position;
     }
 
     public void updateById(Submit submit) {

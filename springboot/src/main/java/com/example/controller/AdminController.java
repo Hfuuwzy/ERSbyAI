@@ -9,28 +9,29 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 /**
- * 前端请求接口
+ * 管理员接口
  */
 @RestController
 @RequestMapping("/admin")
+@Tag(name = "管理员管理", description = "管理员增删改查接口")
 public class AdminController {
 
     @Resource
     private AdminService adminService;
 
-    /**
-     * 新增
-     */
+    @Operation(summary = "新增管理员", description = "创建新的管理员账号")
     @PostMapping("/add")
     public Result add(@RequestBody Admin admin) {
         adminService.add(admin);
         return Result.success();
     }
 
-    /**
-     * 修改
-     */
+    @Operation(summary = "修改管理员", description = "更新管理员信息")
     @PutMapping("/update")
     public Result update(@RequestBody Admin admin) {
         adminService.updateById(admin);
