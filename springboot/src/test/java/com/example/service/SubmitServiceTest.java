@@ -59,6 +59,27 @@ class SubmitServiceTest {
         assertThat(allPrompts.get(0).get(1)).contains("候选人简历", "岗位要求");
     }
 
+    @Test
+    void addStillSubmitsForManualReviewWhenAiServiceFails() {
+        Submit submit = new Submit();
+        submit.setUserId(10);
+        submit.setPositionId(20);
+        submit.setResumeId(30);
+        when(submitMapper.selectByUserIdAndPositionId(10, 20)).thenReturn(List.of());
+        when(resumeMapper.selectById(30)).thenReturn(resume());
+        when(positionMapper.selectById(20)).thenReturn(position());
+        when(aiUtil.ai(anyList())).thenThrow(new RuntimeException("AI API 请求失败: HTTP 401 - 无效的令牌"));
+
+        submitService.add(submit);
+
+        ArgumentCaptor<Submit> captor = ArgumentCaptor.forClass(Submit.class);
+        verify(submitMapper).insert(captor.capture());
+        Submit inserted = captor.getValue();
+        assertThat(inserted.getStatus()).isEqualTo("已投递");
+        assertThat(inserted.getAiScore()).isNull();
+        assertThat(inserted.getAiReview()).isEqualTo("AI审核失败，待人工审核");
+    }
+
     private Resume resume() {
         Resume resume = new Resume();
         resume.setName("Java后端开发简历");

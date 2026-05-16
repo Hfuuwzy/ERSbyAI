@@ -16,6 +16,8 @@ import com.example.utils.TokenUtils;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import jakarta.annotation.Resource;
+import cn.hutool.log.Log;
+import cn.hutool.log.LogFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -23,6 +25,8 @@ import java.util.List;
 
 @Service
 public class SubmitService {
+
+    private static final Log log = LogFactory.get();
 
     @Resource
     private SubmitMapper submitMapper;
@@ -43,13 +47,19 @@ public class SubmitService {
         //进行ai打分和审核
         Resume resume = resumeMapper.selectById(submit.getResumeId());
         Position position = positionMapper.selectById(submit.getPositionId());
-        List<String> scoreMessageList = buildScoreMessages(resume, position);
-        String aiScore = aiUtil.ai(scoreMessageList);
-        submit.setAiScore(Integer.parseInt(aiScore.trim()));
-        List<String> reviewMessageList = buildReviewMessages(resume, position);
-        String aiReview = aiUtil.ai(reviewMessageList);
-        submit.setAiReview(aiReview.trim());
-        submit.setStatus("不合格".equals(submit.getAiReview())?"不适合":"通过");
+        try {
+            List<String> scoreMessageList = buildScoreMessages(resume, position);
+            String aiScore = aiUtil.ai(scoreMessageList);
+            submit.setAiScore(Integer.parseInt(aiScore.trim()));
+            List<String> reviewMessageList = buildReviewMessages(resume, position);
+            String aiReview = aiUtil.ai(reviewMessageList);
+            submit.setAiReview(aiReview.trim());
+            submit.setStatus("不合格".equals(submit.getAiReview())?"不适合":"通过");
+        } catch (RuntimeException e) {
+            log.warn("AI简历审核失败，转为人工审核：{}", e.getMessage());
+            submit.setAiReview("AI审核失败，待人工审核");
+            submit.setStatus("已投递");
+        }
         submitMapper.insert(submit);
     }
 
