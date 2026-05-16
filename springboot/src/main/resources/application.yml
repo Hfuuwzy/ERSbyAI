@@ -26,3 +26,15 @@ ai:
   base-url: https://kimi.a7m.com.cn/v1
   api-key: ${AI_API_KEY:}
   model: kimi-k2.6
+
+# OpenAPI / Swagger 配置
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+  show-actuator: false
