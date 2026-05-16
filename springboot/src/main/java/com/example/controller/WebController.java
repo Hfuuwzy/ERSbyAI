@@ -7,6 +7,7 @@ import com.example.service.AdminService;
 import com.example.service.EmployService;
 import com.example.service.UserService;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,7 +32,7 @@ public class WebController {
      * 登录
      */
     @PostMapping("/login")
-    public Result login(@RequestBody Account account) {
+    public Result login(@Valid @RequestBody Account account) {
         Account loginAccount = null;
         if (RoleEnum.ADMIN.name().equals(account.getRole())) {
             loginAccount = adminService.login(account);
@@ -49,7 +50,7 @@ public class WebController {
      * 注册
      */
     @PostMapping("/register")
-    public Result register(@RequestBody Account account) {
+    public Result register(@Valid @RequestBody Account account) {
         if (RoleEnum.EMPLOY.name().equals(account.getRole())) {
             employService.register(account);
         }
