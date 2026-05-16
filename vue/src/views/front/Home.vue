@@ -1,210 +1,594 @@
 <template>
-    <div style="min-height: 1000px; background-color: #f6f6f8">
-        <img src="@/assets/imgs/banner.jpg" alt="" style="width: 100%; height: 120px">
-        <div style="margin: 25px auto; width: 70%; text-align: center">
-            <el-input size="large" v-model="data.name" placeholder="请输入你感兴趣的职位"
-                      style="width: 500px; margin-right: 5px"></el-input>
-            <el-button size="large" type="info" @click="search">搜索</el-button>
+  <div class="home-page">
+    <!-- Hero -->
+    <section class="hero-section">
+      <div class="hero-bg animate-gradient"></div>
+      <div class="hero-blob blob-1"></div>
+      <div class="hero-blob blob-2"></div>
+      <div class="hero-content">
+        <h1 class="hero-title">发现你的下一份理想工作</h1>
+        <p class="hero-subtitle">AI 智能匹配 + 海量优质岗位</p>
+        <div class="hero-search">
+          <el-input
+            v-model="data.name"
+            placeholder="搜索职位、公司"
+            size="large"
+            class="hero-search-input"
+            @keyup.enter="search"
+          />
+          <GradientButton @click="search">搜索</GradientButton>
         </div>
-        <div style="margin: 0 auto; width: 70%; text-align: center">
-            <div style="display: flex">
-                <div @click="navTo('/front/positionDetail?id='+ data.leftAd.positionId)"   style="cursor:pointer;flex: 1"><img style="width: 100%; height: 240px; border-top-left-radius: 10px" :src="data.leftAd.img" alt=""></div>
-                <div @click="navTo('/front/positionDetail?id='+ data.centerAd.positionId)" style="cursor:pointer;flex: 2; margin: 0 2px"><img style="width: 100%; height: 240px" :src="data.centerAd.img" alt=""></div>
-                <div @click="navTo('/front/positionDetail?id='+ data.rightAd.positionId)"  style="cursor:pointer;flex: 1"><img style="width: 100%; height: 240px; border-top-right-radius: 10px" :src="data.rightAd.img" alt=""></div>
-            </div>
-            <div style="display: flex">
-                <div @click="navTo('/front/positionDetail?id='+ data.leftDownAd.positionId)"   style="cursor:pointer; flex: 1"><img style="width: 100%; height: 120px; border-bottom-left-radius: 10px" :src="data.leftDownAd.img" alt=""></div>
-                <div @click="navTo('/front/positionDetail?id='+ data.centerDownAd.positionId)" style="cursor:pointer; flex: 2; margin: 0 2px"><img style="width: 100%; height: 120px" :src="data.centerDownAd.img" alt=""></div>
-                <div @click="navTo('/front/positionDetail?id='+ data.rightDownAd.positionId)"  style="cursor:pointer; flex: 1"><img style="width: 100%; height: 120px; border-bottom-right-radius: 10px" :src="data.rightDownAd.img" alt=""></div>
-            </div>
+      </div>
+    </section>
 
-            <div style="margin: 30px; font-size: 22px;font-weight: bold;text-align: center">精选岗位</div>
-
-            <!-- 添加横向滚动容器 -->
-            <div style="display: flex; overflow-x: auto; gap: 15px; padding: 10px 0; -ms-overflow-style: none; scrollbar-width: none;" class="scrollbar">
-                <div class="card"
-                     v-for="it in data.recommendData"
-                     @click="navTo('/front/positionDetail?id=' + it.id )"
-                     style="
-                        min-width: 300px;  /* 固定卡片宽度 */
-                        height: 190px;    /* 固定卡片高度 */
-                        cursor: pointer;
-                        border-radius: 8px;
-                        padding: 15px;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-                        display: flex;
-                        flex-direction: column;
-                        justify-content: space-between;
-                        ">
-                    <!-- 职位名称和薪资 -->
-                    <div style="display: flex; justify-content: space-between">
-                        <div style="font-size: 16px; font-weight: bold">{{ it.name }}</div>
-                        <div style="color: red; font-weight: bold">{{ it.salary }}</div>
-                    </div>
-
-                    <!-- 技能标签 - 改为紧凑显示 -->
-                    <div style="display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0">
-                        <el-tag
-                            v-for="tag in it.tagList"
-                            style="margin-right: 0; padding: 2px 8px; font-size: 12px"
-                            size="small"
-                            type="primary">  <!-- 改为蓝色标签 -->
-                            {{ tag }}
-                        </el-tag>
-                    </div>
-
-                    <!-- 公司信息 -->
-                    <div style="display: flex; align-items: center; margin-top: auto">
-                        <img :src="it.employAvatar"
-                             alt=""
-                             style="width: 30px; height: 30px; border-radius: 5px; object-fit: cover">
-                        <div style="margin-left: 10px; flex-grow: 1">
-                            <div style="flex:1;font-size: 14px; font-weight: 500">{{ it.employName }}</div>
-                            <div style="font-size: 12px; color: #666">{{ it.employStage }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-
-            <div style="margin: 30px; font-size: 22px;font-weight: bold;text-align: center">热招岗位</div>
-            <div>
-                <el-tabs v-model="data.activeName" class="demo-tabs" @tab-change="handleClick">
-                    <el-tab-pane v-for="item in data.industryData" :label="item.name" :name="item.id">
-                        <el-row :gutter="10">
-                            <el-col :span="8" v-for="it in data.positionData" style="margin-bottom: 20px">
-                                <div class="card" style="cursor: pointer"
-                                     @click="navTo('/front/positionDetail?id=' + it.id )">
-                                    <div style="display: flex; padding: 0 5px">
-                                        <div style="flex: 1; text-align: left; font-size: 16px">{{ it.name }}</div>
-                                        <div style="width: 100px; text-align: right; color: rgb(254, 87, 74)">
-                                            {{ it.salary }}
-                                        </div>
-                                    </div>
-                                    <div style="margin: 10px 0; padding: 0 5px; text-align: left">
-                                        <el-tag style="margin-right: 5px" type="info" v-for="tag in it.tagList">{{
-                                                tag
-                                            }}
-                                        </el-tag>
-                                    </div>
-                                    <div style="display: flex; align-items: center; padding: 10px 5px">
-                                        <div style="width: 35px">
-                                            <img :src="it.employAvatar" alt=""
-                                                 style="width: 35px; height: 35px; border-radius: 5px; border: 1px solid #cccccc">
-                                        </div>
-                                        <div style="width: 80px">{{ it.employName }}</div>
-                                        <div style="flex: 1">{{ item.name }}</div>
-                                        <div style="width: 80px">{{ it.employStage }}</div>
-                                    </div>
-                                </div>
-                            </el-col>
-                        </el-row>
-                    </el-tab-pane>
-                </el-tabs>
-            </div>
+    <!-- Bento Ads -->
+    <section class="bento-section">
+      <div class="bento-grid">
+        <div
+          v-if="data.leftAd.img"
+          class="bento-item large"
+          @click="navTo('/front/positionDetail?id=' + data.leftAd.positionId)"
+        >
+          <img :src="data.leftAd.img" alt="left ad" />
         </div>
-    </div>
+        <div
+          v-if="data.centerAd.img"
+          class="bento-item xlarge"
+          @click="navTo('/front/positionDetail?id=' + data.centerAd.positionId)"
+        >
+          <img :src="data.centerAd.img" alt="center ad" />
+        </div>
+        <div
+          v-if="data.rightAd.img"
+          class="bento-item large"
+          @click="navTo('/front/positionDetail?id=' + data.rightAd.positionId)"
+        >
+          <img :src="data.rightAd.img" alt="right ad" />
+        </div>
+        <div
+          v-for="(ad, idx) in bottomAds"
+          :key="idx"
+          class="bento-item small"
+          @click="navTo('/front/positionDetail?id=' + ad.positionId)"
+        >
+          <img :src="ad.img" :alt="'ad ' + idx" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Featured Jobs -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">精选岗位</h2>
+        <span class="section-subtitle">AI 为你推荐的优质机会</span>
+      </div>
+      <div class="horizontal-scroll">
+        <JobCard
+          v-for="job in data.recommendData"
+          :key="job.id"
+          :job="job"
+        />
+        <div v-if="!data.recommendData || data.recommendData.length === 0" class="empty-hint">
+          暂无推荐岗位
+        </div>
+      </div>
+    </section>
+
+    <!-- Hot Jobs -->
+    <section class="section">
+      <div class="section-header">
+        <h2 class="section-title">热招岗位</h2>
+        <span class="section-subtitle">来自各行业的热门职位</span>
+      </div>
+
+      <div class="tabs" ref="tabsRef">
+        <button
+          v-for="industry in data.industryData"
+          :key="industry.id"
+          :ref="el => setTabRef(el, industry.id)"
+          :class="['tab-btn', { active: data.activeName === industry.id }]"
+          @click="handleClick(industry.id)"
+        >
+          {{ industry.name }}
+        </button>
+        <div
+          class="tab-indicator"
+          :style="{ left: indicatorStyle.left + 'px', width: indicatorStyle.width + 'px' }"
+        ></div>
+      </div>
+
+      <div class="jobs-grid">
+        <JobCard
+          v-for="job in data.positionData"
+          :key="job.id"
+          :job="job"
+        />
+        <div v-if="!data.positionData || data.positionData.length === 0" class="empty-hint">
+          该行业暂无在招岗位
+        </div>
+      </div>
+    </section>
+  </div>
 </template>
 
 <script setup>
-import {onMounted, reactive} from "vue";
-import request from "@/utils/request.js";
-import {ElMessage} from "element-plus";
-import router from "@/router/index.js";
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
+import request from '@/utils/request.js'
+import { ElMessage } from 'element-plus'
+import GradientButton from '@/components/GradientButton.vue'
+import JobCard from '@/components/JobCard.vue'
 
 const data = reactive({
-    name: null,
-    advertiseData: [],
-    centerAd: {},
-    leftAd: {},
-    rightAd: {},
-    centerDownAd: {},
-    leftDownAd: {},
-    rightDownAd: {},
-    industryData: [],
-    activeName: null,
-    positionData: [],
-    recommendData: [],
+  name: null,
+  advertiseData: [],
+  centerAd: {},
+  leftAd: {},
+  rightAd: {},
+  centerDownAd: {},
+  leftDownAd: {},
+  rightDownAd: {},
+  industryData: [],
+  activeName: null,
+  positionData: [],
+  recommendData: []
 })
 
-const loadAdvertise = () => {
-    request.get('/advertise/selectAll').then(res => {
-        if (res.code === '200') {
-            data.advertiseData = res.data
-            // 做一下过滤，把六个广告位信息过滤出来
-            let centerArr = res.data.filter(v => v.location === '中心大图')
-            data.centerAd = centerArr && centerArr.length > 0 ? centerArr[0] : {}
-            let leftArr = res.data.filter(v => v.location === '左侧大图')
-            data.leftAd = leftArr && leftArr.length > 0 ? leftArr[0] : {}
-            let rightArr = res.data.filter(v => v.location === '右侧大图')
-            data.rightAd = rightArr && rightArr.length > 0 ? rightArr[0] : {}
+const tabRefs = ref({})
+const indicatorStyle = reactive({ left: 0, width: 0 })
 
-            let centerDownArr = res.data.filter(v => v.location === '中心小图')
-            data.centerDownAd = centerDownArr && centerDownArr.length > 0 ? centerDownArr[0] : {}
-            let leftDownArr = res.data.filter(v => v.location === '左侧小图')
-            data.leftDownAd = leftDownArr && leftDownArr.length > 0 ? leftDownArr[0] : {}
-            let rightDownArr = res.data.filter(v => v.location === '右侧小图')
-            data.rightDownAd = rightDownArr && rightDownArr.length > 0 ? rightDownArr[0] : {}
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+const setTabRef = (el, id) => {
+  if (el) tabRefs.value[id] = el
 }
+
+const updateIndicator = () => {
+  const el = tabRefs.value[data.activeName]
+  if (!el) return
+  indicatorStyle.left = el.offsetLeft
+  indicatorStyle.width = el.offsetWidth
+}
+
+const bottomAds = computed(() =>
+  [data.leftDownAd, data.centerDownAd, data.rightDownAd].filter(ad => ad && ad.img)
+)
+
+const loadAdvertise = () => {
+  request.get('/advertise/selectAll').then(res => {
+    if (res.code === '200') {
+      data.advertiseData = res.data
+      const pick = (loc) => {
+        const arr = res.data.filter(v => v.location === loc)
+        return arr && arr.length > 0 ? arr[0] : {}
+      }
+      data.centerAd = pick('中心大图')
+      data.leftAd = pick('左侧大图')
+      data.rightAd = pick('右侧大图')
+      data.centerDownAd = pick('中心小图')
+      data.leftDownAd = pick('左侧小图')
+      data.rightDownAd = pick('右侧小图')
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
+}
+
 const loadIndustry = () => {
-    request.get('/industry/selectAll').then((res) => {
-        if (res.code === '200') {
-            data.industryData = res.data
-            data.activeName = data.industryData[0].id
-            handleClick(data.activeName)
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+  request.get('/industry/selectAll').then(res => {
+    if (res.code === '200') {
+      data.industryData = res.data
+      if (data.industryData.length > 0) {
+        data.activeName = data.industryData[0].id
+        handleClick(data.activeName)
+        nextTick(updateIndicator)
+      }
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
+
 const handleClick = (industryId) => {
-    request.get('/position/selectAll', {
-        params: {
-            industryId: industryId,
-            status:'审核通过'
-        }
-    }).then((res) => {
-        if (res.code === '200') {
-            data.positionData = res.data
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+  data.activeName = industryId
+  nextTick(updateIndicator)
+  request.get('/position/selectAll', {
+    params: {
+      industryId: industryId,
+      status: '审核通过'
+    }
+  }).then(res => {
+    if (res.code === '200') {
+      data.positionData = res.data
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 const loadRecommend = () => {
-    request.get('position/recommend').then(res => {
-        if (res.code === '200') {
-            data.recommendData = res.data
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+  request.get('position/recommend').then(res => {
+    if (res.code === '200') {
+      data.recommendData = res.data
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 const search = () => {
-    location.href = '/front/search?name=' + data.name
+  location.href = '/front/search?name=' + (data.name || '')
 }
+
 const navTo = (url) => {
-    location.href = url;
+  location.href = url
 }
+
 loadAdvertise()
 loadIndustry()
 onMounted(() => {
-    loadRecommend()
+  loadRecommend()
+  window.addEventListener('resize', updateIndicator)
 })
-
 </script>
+
 <style scoped>
-/* 隐藏横向滚动条 */
-::-webkit-scrollbar {
-    display: none;
+.home-page {
+  background: var(--bg-primary);
+  min-height: 100vh;
+  padding-bottom: 60px;
 }
-.scrollbar{
-    display: none;
+
+/* ===== Hero ===== */
+.hero-section {
+  position: relative;
+  min-height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 80px 20px;
+}
+
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--gradient-hero);
+  background-size: 200% 200%;
+  z-index: 0;
+}
+
+.animate-gradient {
+  animation: gradientFlow 15s ease infinite;
+}
+
+@keyframes gradientFlow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.hero-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: rgba(255, 255, 255, 0.5);
+  top: -100px;
+  left: -100px;
+  animation: blobFloat 18s ease-in-out infinite;
+}
+
+.blob-2 {
+  width: 300px;
+  height: 300px;
+  background: rgba(240, 147, 251, 0.6);
+  bottom: -80px;
+  right: -80px;
+  animation: blobFloat 22s ease-in-out infinite reverse;
+}
+
+@keyframes blobFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(40px, -30px) scale(1.1); }
+}
+
+.hero-content {
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  max-width: 800px;
+  width: 100%;
+  color: #fff;
+}
+
+.hero-title {
+  font-size: 48px;
+  font-weight: 800;
+  margin: 0 0 16px;
+  letter-spacing: -0.5px;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.hero-subtitle {
+  font-size: 18px;
+  margin: 0 0 40px;
+  opacity: 0.9;
+  font-weight: 400;
+}
+
+.hero-search {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 640px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 8px;
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(8px);
+}
+
+.hero-search :deep(.hero-search-input .el-input__wrapper) {
+  box-shadow: none !important;
+  background: transparent;
+  padding: 0 12px;
+}
+
+.hero-search :deep(.el-input__inner) {
+  font-size: 16px;
+  height: 44px;
+}
+
+/* ===== Bento Ads ===== */
+.bento-section {
+  max-width: 1200px;
+  margin: -50px auto 0;
+  padding: 0 20px;
+  position: relative;
+  z-index: 3;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 220px 140px;
+  gap: 16px;
+}
+
+.bento-item {
+  position: relative;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--bg-white);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.35s ease, box-shadow 0.35s ease;
+}
+
+.bento-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.5s ease;
+}
+
+.bento-item:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+.bento-item:hover img {
+  transform: scale(1.05);
+}
+
+.bento-item.large {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+.bento-item.xlarge {
+  grid-column: span 2;
+  grid-row: span 1;
+}
+
+.bento-item.small {
+  grid-column: span 1;
+  grid-row: span 1;
+}
+
+/* ensure bottom row spans 4 columns evenly when 3 small items render */
+.bento-item.small:nth-child(4) { grid-column: 1 / span 1; }
+.bento-item.small:nth-child(5) { grid-column: 2 / span 2; }
+.bento-item.small:nth-child(6) { grid-column: 4 / span 1; }
+
+/* ===== Sections ===== */
+.section {
+  max-width: 1200px;
+  margin: 60px auto 0;
+  padding: 0 20px;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 12px;
+}
+
+.section-title {
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+  position: relative;
+  padding-left: 14px;
+}
+
+.section-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--gradient-button);
+}
+
+.section-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+/* horizontal scroll */
+.horizontal-scroll {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding: 8px 4px 16px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.3) transparent;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(102, 126, 234, 0.3);
+  border-radius: 4px;
+}
+
+.horizontal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(102, 126, 234, 0.5);
+}
+
+.horizontal-scroll > :deep(.job-card) {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+
+/* ===== Tabs ===== */
+.tabs {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  margin-bottom: 24px;
+  background: var(--bg-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  width: fit-content;
+}
+
+.tab-btn {
+  position: relative;
+  z-index: 2;
+  padding: 10px 20px;
+  border: none;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.tab-btn:hover {
+  color: var(--color-primary);
+}
+
+.tab-btn.active {
+  color: #fff;
+}
+
+.tab-indicator {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  background: var(--gradient-button);
+  border-radius: var(--radius-sm);
+  transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1), width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* ===== Jobs grid ===== */
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.jobs-grid > :deep(.job-card) {
+  min-width: 0;
+  width: 100%;
+}
+
+.empty-hint {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 960px) {
+  .hero-title { font-size: 36px; }
+  .hero-subtitle { font-size: 16px; }
+  .hero-search { flex-direction: column; padding: 12px; }
+  .hero-search :deep(.el-input) { width: 100%; }
+
+  .bento-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: auto;
+  }
+  .bento-item.large,
+  .bento-item.xlarge,
+  .bento-item.small,
+  .bento-item.small:nth-child(4),
+  .bento-item.small:nth-child(5),
+  .bento-item.small:nth-child(6) {
+    grid-column: span 1;
+    height: 160px;
+  }
+  .bento-item.xlarge {
+    grid-column: span 2;
+    height: 200px;
+  }
+
+  .jobs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-section { min-height: 420px; padding: 60px 16px; }
+  .hero-title { font-size: 28px; }
+  .bento-grid { grid-template-columns: 1fr; }
+  .bento-item,
+  .bento-item.large,
+  .bento-item.xlarge,
+  .bento-item.small,
+  .bento-item.small:nth-child(4),
+  .bento-item.small:nth-child(5),
+  .bento-item.small:nth-child(6) {
+    grid-column: span 1;
+    height: 160px;
+  }
+  .jobs-grid { grid-template-columns: 1fr; }
+  .section-header { flex-direction: column; align-items: flex-start; }
 }
 </style>
