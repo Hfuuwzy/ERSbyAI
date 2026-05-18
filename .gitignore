@@ -60,5 +60,11 @@ application-dev.yml
 # Git工作树目录
 .worktrees/
 
+# OpenCode/Sisyphus 工作目录
+.sisyphus/
+
+# 文档计划（仅本地）
+docs/superpowers/
+
 # 上传文件（测试用的上传目录）
 files/
