@@ -33,7 +33,7 @@
                 <el-table-column prop="address" label="详细地址" show-overflow-tooltip/>
                 <el-table-column prop="industryName" label="所属行业" show-overflow-tooltip/>
                 <el-table-column prop="scale" label="公司规模"/>
-                <el-table-column prop="scale" label="融资阶段"/>
+                <el-table-column prop="stage" label="融资阶段"/>
                 <el-table-column prop="status" label="审核状态">
                     <template v-slot="scope">
                         <el-tag v-if="scope.row.status === '待审核'" type="warning">{{ scope.row.status }}</el-tag>

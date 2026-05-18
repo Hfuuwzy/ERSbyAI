@@ -108,7 +108,8 @@ const navTo = (url) => {
 }
 
 const goSubmit = () => {
-  location.href = '/front/search'
+  // TODO: 未来可优化为打开职位选择弹窗，让用户选择要投递的职位
+  location.href = '/front/home'
 }
 
 const delResume = (id) => {

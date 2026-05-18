@@ -214,6 +214,7 @@ const clearFilters = () => {
   data.filters.salary = ''
   data.filters.experience = ''
   data.filters.education = ''
+  loadPosition()
 }
 
 const searchByTag = (tag) => {

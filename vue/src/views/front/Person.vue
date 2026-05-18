@@ -224,13 +224,12 @@ const baseUrl = import.meta.env.VITE_BASE_URL
 
 const validatePass = (rule, value, callback) => {
   if (!value) {
-    callback(new Error('请确认密码'))
-  } else {
-    if (value !== data.user.newPassword) {
-      callback(new Error("确认密码跟原密码不一致!"))
-    }
-    callback()
+    return callback(new Error('请确认密码'))
   }
+  if (value !== data.form.newPassword) {
+    return callback(new Error('确认密码与新密码不一致'))
+  }
+  callback()
 }
 
 const data = reactive({
