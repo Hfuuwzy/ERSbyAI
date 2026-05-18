@@ -1,295 +1,395 @@
 <template>
+  <div class="resume-page">
+    <div class="resume-bg"></div>
     <div class="resume-container">
-        <div class="main-content">
-            <div class="header-section">
-                <div class="page-title">我的简历</div>
-                <div class="resume-count">共 {{ data.resumeData.length }} 份简历</div>
-            </div>
-
-            <div class="resume-grid">
-                <!-- 新建简历卡片 -->
-                <div class="resume-card create-card" @click="navTo('/front/resumeEdit')">
-                    <div class="create-icon">
-                        <el-icon><Plus /></el-icon>
-                    </div>
-                    <div class="create-text">新建简历</div>
-                </div>
-
-                <!-- 简历列表卡片 -->
-                <div class="resume-card" v-for="(item, index) in data.resumeData" :key="index">
-                    <div class="card-cover" @click="navTo('/front/resumeEdit?id=' + item.id)">
-                        <!-- 使用图片展示封面 -->
-                        <img src="@/assets/imgs/img.png" alt="简历封面" class="resume-cover-img">
-                        <div class="cover-hover-mask">
-                            <el-button type="primary" round size="small">编辑简历</el-button>
-                        </div>
-                    </div>
-                    
-                    <div class="card-info">
-                        <div class="info-main">
-                            <div class="resume-name" :title="item.name">{{ item.name }}</div>
-                            <div class="resume-time">最近更新: 刚刚</div>
-                        </div>
-                        <div class="info-actions">
-                            <el-tooltip content="预览简历" placement="top">
-                                <a :href="'/resumeView?id=' + item.id" target="_blank" class="action-btn preview-btn">
-                                    <el-icon><View /></el-icon>
-                                </a>
-                            </el-tooltip>
-                            <el-tooltip content="删除简历" placement="top">
-                                <div class="action-btn delete-btn" @click.stop="delResume(item.id)">
-                                    <el-icon><Delete /></el-icon>
-                                </div>
-                            </el-tooltip>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- 空状态 -->
-            <div v-if="data.resumeData.length === 0" class="empty-state">
-                <el-empty description="暂无简历，快去创建一份吧！"></el-empty>
-            </div>
+      <!-- Page header -->
+      <header class="page-header">
+        <div class="title-block">
+          <h1 class="page-title">我的简历</h1>
+          <p class="page-subtitle">共 {{ data.resumeData.length }} 份简历</p>
         </div>
+        <GradientButton @click="navTo('/front/resumeEdit')">
+          <el-icon style="vertical-align: -3px; margin-right: 6px;"><Plus /></el-icon>
+          新建简历
+        </GradientButton>
+      </header>
+
+      <!-- Empty state -->
+      <EmptyState
+        v-if="data.resumeData.length === 0"
+        icon="📄"
+        title="还没有简历"
+        description="创建你的第一份简历，开启求职之旅"
+        actionText="立即创建"
+        @action="navTo('/front/resumeEdit')"
+      />
+
+      <!-- Resume grid -->
+      <div v-else class="resume-grid">
+        <!-- Create new resume card -->
+        <GlassCard class="create-card" @click="navTo('/front/resumeEdit')">
+          <div class="create-icon-wrap">
+            <el-icon class="create-icon"><Plus /></el-icon>
+          </div>
+          <div class="create-text">新建简历</div>
+          <div class="create-hint">从空白开始打造一份新简历</div>
+        </GlassCard>
+
+        <!-- Resume cards -->
+        <GlassCard
+          v-for="(item, index) in data.resumeData"
+          :key="index"
+          class="resume-card"
+        >
+          <div class="card-head">
+            <div class="resume-avatar">
+              <el-icon><Document /></el-icon>
+            </div>
+            <div class="resume-meta">
+              <h3 class="resume-name" :title="item.name">{{ item.name || '未命名简历' }}</h3>
+              <div class="resume-time">
+                <el-icon><Clock /></el-icon>
+                <span>最近更新: 刚刚</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="info-row">
+              <span class="info-label">期望薪资</span>
+              <span class="info-value salary">{{ item.salary || '面议' }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">工作经验</span>
+              <span class="info-value">{{ item.experience || '不限' }}</span>
+            </div>
+          </div>
+
+          <div class="card-actions">
+            <button class="action-btn edit" @click="navTo('/front/resumeEdit?id=' + item.id)">
+              <el-icon><Edit /></el-icon>
+              <span>编辑</span>
+            </button>
+            <button class="action-btn delete" @click="delResume(item.id)">
+              <el-icon><Delete /></el-icon>
+              <span>删除</span>
+            </button>
+            <button class="action-btn submit" @click="goSubmit">
+              <el-icon><Promotion /></el-icon>
+              <span>投递</span>
+            </button>
+          </div>
+        </GlassCard>
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup>
-import {reactive} from "vue";
-import request from "@/utils/request.js";
-import {ElMessage, ElMessageBox} from "element-plus";
-import {Delete, Plus, View} from "@element-plus/icons-vue";
+import { reactive } from "vue"
+import request from "@/utils/request.js"
+import { ElMessage, ElMessageBox } from "element-plus"
+import { Delete, Plus, Edit, Promotion, Document, Clock } from "@element-plus/icons-vue"
+import GlassCard from "@/components/GlassCard.vue"
+import GradientButton from "@/components/GradientButton.vue"
+import EmptyState from "@/components/EmptyState.vue"
 
 const data = reactive({
-    user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
-    resumeData: [],
+  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  resumeData: [],
 })
 
 const navTo = (url) => {
-    location.href = url
+  location.href = url
 }
+
+const goSubmit = () => {
+  location.href = '/front/search'
+}
+
 const delResume = (id) => {
-    ElMessageBox.confirm('删除后数据无法恢复，您确定删除吗？', '删除确认', { type: 'warning' }).then(res => {
-        request.delete('/resume/delete/' + id).then(res => {
-            if (res.code === '200') {
-                ElMessage.success('删除成功')
-                loadResume()
-            } else {
-                ElMessage.error(res.msg)
-            }
-        })
-    }).catch(err => {
-        console.error(err)
+  ElMessageBox.confirm('删除后数据无法恢复，您确定删除吗？', '删除确认', { type: 'warning' }).then(() => {
+    request.delete('/resume/delete/' + id).then(res => {
+      if (res.code === '200') {
+        ElMessage.success('删除成功')
+        loadResume()
+      } else {
+        ElMessage.error(res.msg)
+      }
     })
+  }).catch(err => {
+    console.error(err)
+  })
 }
 
 const loadResume = () => {
-    request.get('/resume/selectAll', {
-        params: {
-            userId: data.user.id
-        }
-    }).then((res) => {
-        if (res.code === '200') {
-            data.resumeData = res.data
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+  request.get('/resume/selectAll', {
+    params: { userId: data.user.id }
+  }).then((res) => {
+    if (res.code === '200') {
+      data.resumeData = res.data
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 loadResume()
 </script>
 
 <style scoped>
+.resume-page {
+  position: relative;
+  min-height: calc(100vh - 80px);
+  padding: 48px 24px 64px;
+  overflow: hidden;
+}
+
+.resume-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0% 0%, rgba(102, 126, 234, 0.18), transparent 45%),
+    radial-gradient(circle at 100% 0%, rgba(240, 147, 251, 0.15), transparent 45%),
+    var(--bg-primary);
+  z-index: 0;
+}
+
 .resume-container {
-    min-height: calc(100vh - 100px);
-    background-color: #f5f7fa;
-    padding: 40px 0;
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-.main-content {
-    width: 1200px;
-    margin: 0 auto;
-    max-width: 95%;
+/* Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 32px;
 }
 
-.header-section {
-    display: flex;
-    align-items: baseline;
-    margin-bottom: 30px;
+.title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .page-title {
-    font-size: 24px;
-    font-weight: 600;
-    color: #333;
-    margin-right: 15px;
+  margin: 0;
+  font-size: 32px;
+  font-weight: 700;
+  background: var(--gradient-hero);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.5px;
 }
 
-.resume-count {
-    color: #999;
-    font-size: 14px;
+.page-subtitle {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
+/* Grid */
 .resume-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 25px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
 }
 
-/* 卡片通用样式 */
-.resume-card {
-    background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    display: flex;
-    flex-direction: column;
-    height: 280px; /* 调整总高度适应图片 */
-    position: relative;
-}
-
-.resume-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-/* 新建卡片样式 */
+/* Create card */
 .create-card {
-    border: 2px dashed #e0e0e0;
-    box-shadow: none;
-    cursor: pointer;
-    align-items: center;
-    justify-content: center;
-    background: transparent;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 260px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.55);
+  border: 2px dashed rgba(102, 126, 234, 0.4);
+  text-align: center;
 }
 
 .create-card:hover {
-    border-color: #409EFF;
-    background: rgba(64, 158, 255, 0.02);
+  border-color: var(--color-primary);
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.create-icon-wrap {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-button);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.35);
 }
 
 .create-icon {
-    font-size: 40px;
-    color: #ccc;
-    margin-bottom: 15px;
-    transition: color 0.3s;
+  font-size: 32px;
+  color: #fff;
 }
 
 .create-text {
-    color: #666;
-    font-size: 16px;
-    font-weight: 500;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.create-card:hover .create-icon,
-.create-card:hover .create-text {
-    color: #409EFF;
+.create-hint {
+  font-size: 13px;
+  color: var(--text-secondary);
 }
 
-/* 简历封面区域 */
-.card-cover {
-    height: 180px; /* 稍微调低高度，让图片比例更协调 */
-    background: #f8f8f8;
-    position: relative;
-    cursor: pointer;
-    overflow: hidden;
+/* Resume card */
+.resume-card {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-height: 260px;
 }
 
-.resume-cover-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.5s ease;
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.resume-card:hover .resume-cover-img {
-    transform: scale(1.05); /* 悬停微放大图片 */
+.resume-avatar {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-button);
+  color: #fff;
+  font-size: 22px;
+  box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
 }
 
-/* 移除之前的 CSS 模拟样式相关代码 */
-.cover-hover-mask {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.4);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s;
-}
-
-.card-cover:hover .cover-hover-mask {
-    opacity: 1;
-}
-
-/* 卡片信息区域 */
-.card-info {
-    padding: 15px 20px;
-    background: #fff;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-top: 1px solid #f0f0f0;
-}
-
-.info-main {
-    flex: 1;
-    overflow: hidden;
-    margin-right: 10px;
+.resume-meta {
+  flex: 1;
+  min-width: 0;
 }
 
 .resume-name {
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    margin-bottom: 4px;
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .resume-time {
-    font-size: 12px;
-    color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
-.info-actions {
-    display: flex;
-    gap: 10px;
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.info-label {
+  color: var(--text-secondary);
+}
+
+.info-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.info-value.salary {
+  color: var(--color-error);
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
 }
 
 .action-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: #f5f7fa;
-    color: #606266;
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 0;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.preview-btn:hover {
-    background: #e6f7ff;
-    color: #1890ff;
+.action-btn:hover {
+  transform: translateY(-1px);
 }
 
-.delete-btn:hover {
-    background: #fff1f0;
-    color: #ff4d4f;
+.action-btn.edit:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
-/* 响应式 */
-@media (max-width: 768px) {
-    .resume-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100%, 1fr));
-    }
+.action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.08);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.action-btn.submit {
+  background: var(--gradient-button);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 3px 10px rgba(102, 126, 234, 0.25);
+}
+
+.action-btn.submit:hover {
+  box-shadow: 0 6px 18px rgba(102, 126, 234, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+  .resume-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .resume-grid {
+    grid-template-columns: 1fr;
+  }
+  .page-title {
+    font-size: 26px;
+  }
 }
 </style>
