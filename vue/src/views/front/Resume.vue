@@ -66,6 +66,10 @@
           </div>
 
           <div class="card-actions">
+            <button class="action-btn preview" @click="navTo('/resumeView?id=' + item.id)">
+              <el-icon><View /></el-icon>
+              <span>预览</span>
+            </button>
             <button class="action-btn edit" @click="navTo('/front/resumeEdit?id=' + item.id)">
               <el-icon><Edit /></el-icon>
               <span>编辑</span>
@@ -89,7 +93,7 @@
 import { reactive } from "vue"
 import request from "@/utils/request.js"
 import { ElMessage, ElMessageBox } from "element-plus"
-import { Delete, Plus, Edit, Promotion, Document, Clock } from "@element-plus/icons-vue"
+import { Delete, Plus, Edit, Promotion, Document, Clock, View } from "@element-plus/icons-vue"
 import GlassCard from "@/components/GlassCard.vue"
 import GradientButton from "@/components/GradientButton.vue"
 import EmptyState from "@/components/EmptyState.vue"

@@ -8,12 +8,20 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  label: { type: String, required: true }
+  label: { type: String, required: true },
+  // Explicit color variant. When set, overrides label-based auto-detection.
+  // Supported: blue | purple | pink | orange | green | gray
+  variant: { type: String, default: '' }
 })
 
 defineEmits(['click'])
 
+const VALID_VARIANTS = ['blue', 'purple', 'pink', 'orange', 'green', 'gray']
+
 const tagClass = computed(() => {
+  if (props.variant && VALID_VARIANTS.includes(props.variant)) {
+    return `tag-${props.variant}`
+  }
   const l = props.label.toLowerCase()
   if (l.includes('前端') || l.includes('vue') || l.includes('react') || l.includes('js') || l.includes('css') || l.includes('web'))
     return 'tag-blue'

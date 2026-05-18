@@ -23,7 +23,9 @@
       <GlassCard v-for="item in filteredData" :key="item.id" class="submission-item">
         <div class="submission-header">
           <div class="position-info">
-            <h3 class="position-name">{{ item.positionName }}</h3>
+            <h3 class="position-name">
+              <a :href="'/front/positionDetail?id=' + item.positionId" class="position-link">{{ item.positionName }}</a>
+            </h3>
             <span class="company-name">{{ item.employName }}</span>
           </div>
           <TagSkill :label="item.status" :variant="getStatusVariant(item.status)" />
@@ -251,6 +253,16 @@ loadSubmit()
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: 4px;
+}
+
+.position-link {
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.position-link:hover {
+  color: var(--color-primary);
 }
 
 .company-name {

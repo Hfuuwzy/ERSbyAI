@@ -1,101 +1,255 @@
 <template>
-    <div style="min-height: 500px; background-color: #f6f6f8; padding-bottom: 20px">
-        <div style="height: 200px; background-color: #3b526a; padding: 50px 0">
-            <div style="width: 80%; margin: 0 auto">
-                <div style="display: flex; color: white">
-                    <img :src="data.employData.avatar" alt="" style="width: 70px; height: 70px; border-radius: 10px">
-                    <div style="margin-left: 20px">
-                        <div style="font-size: 20px;font-weight: bold;">{{data.employData.name}}</div>
-                        <div style="margin-top: 10px">
-                            <el-icon><Coordinate /></el-icon><span style="font-size: 16px; margin-right: 20px">{{ data.employData.stage }}</span>
-                            <el-icon><User /></el-icon><span style="font-size: 16px; margin-right: 20px">{{ data.employData.scale }}</span>
-                            <el-icon><CollectionTag /></el-icon><span style="font-size: 16px">在招职位：{{data.positionData.length}}</span>
-                        </div>
-                    </div>
-                </div>
-                <div style="margin-top: 15px; color: white; font-size: 17px; display: flex; align-items: center">
-                    <el-icon><LocationInformation /></el-icon>
-                    <span style="margin-left: 5px">{{ data.employData.address }}</span>
-                </div>
+  <div class="employ-page">
+    <!-- Hero Header -->
+    <header class="employ-header">
+      <div class="header-bg"></div>
+      <div class="header-content">
+        <div class="employ-info">
+          <img :src="data.employData.avatar" class="employ-avatar" />
+          <div class="employ-meta">
+            <h1 class="employ-name">{{ data.employData.name }}</h1>
+            <div class="employ-tags">
+              <span class="meta-item">
+                <el-icon><Coordinate /></el-icon>
+                {{ data.employData.stage }}
+              </span>
+              <span class="meta-item">
+                <el-icon><User /></el-icon>
+                {{ data.employData.scale }}
+              </span>
+              <span class="meta-item">
+                <el-icon><CollectionTag /></el-icon>
+                在招职位 {{ data.positionData.length }}
+              </span>
             </div>
+            <div class="employ-address">
+              <el-icon><LocationInformation /></el-icon>
+              <span>{{ data.employData.address }}</span>
+            </div>
+          </div>
         </div>
-        <div style="width: 70%; margin: 20px auto; text-align: center">
-            <el-input size="large" v-model="data.name" clearable @clear="reset" placeholder="搜索该企业正在招聘的岗位" style="width: 500px; margin-right: 5px"></el-input>
-            <el-button size="large" type="primary" @click="loadPosition">搜索</el-button>
-        </div>
-        <div style="margin: 50px auto; width: 70%">
-            <el-row :gutter="10">
-                <el-col :span="8" v-for="it in data.positionData" style="margin-bottom: 20px">
-                    <div class="card" style="cursor: pointer" @click="navTo('/front/positionDetail?id=' + it.id)">
-                        <div style="display: flex; padding: 0 5px">
-                            <div style="flex: 1; text-align: left; font-size: 16px">{{ it.name }}</div>
-                            <div style="width: 100px; text-align: right; color: red">{{ it.salary }}</div>
-                        </div>
-                        <div style="margin: 10px 0; padding: 0 5px; text-align: left">
-                            <el-tag style="margin-right: 5px" type="info" v-for="tag in it.tagList">{{ tag }}</el-tag>
-                        </div>
-                        <div style="display: flex; align-items: center; padding: 10px 5px">
-                            <div style="width: 35px"><img :src="it.employAvatar" alt="" style="width: 35px; height: 35px; border-radius: 5px; border: 1px solid #cccccc"></div>
-                            <div style="width: 80px; margin-left: 10px">{{ it.employName }}</div>
-                            <div style="flex: 1">{{ it.industryName }}</div>
-                            <div style="width: 80px; text-align: right">{{ it.employStage }}</div>
-                        </div>
-                    </div>
-                </el-col>
-            </el-row>
-        </div>
-
+      </div>
+    </header>
+    
+    <!-- Search Section -->
+    <div class="search-section">
+      <div class="search-box">
+        <el-input 
+          v-model="data.name" 
+          placeholder="搜索该企业正在招聘的岗位" 
+          size="large" 
+          clearable 
+          @clear="reset"
+          class="search-input"
+        />
+        <GradientButton @click="loadPosition">搜索</GradientButton>
+      </div>
     </div>
+    
+    <!-- Jobs Grid -->
+    <div class="jobs-section">
+      <div v-if="data.positionData.length" class="jobs-grid">
+        <JobCard v-for="job in data.positionData" :key="job.id" :job="job" />
+      </div>
+      <EmptyState 
+        v-else 
+        icon="🔍" 
+        title="暂无在招职位" 
+        description="该企业暂时没有开放职位"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup>
-import {reactive, onMounted} from "vue";
-import request from "@/utils/request.js";
-import {ElMessage} from "element-plus";
-import router from "@/router/index.js";
-import {Coordinate, User, CollectionTag,LocationInformation} from "@element-plus/icons-vue";
+import { reactive, onMounted } from "vue"
+import { useRoute } from "vue-router"
+import request from "@/utils/request.js"
+import { ElMessage } from "element-plus"
+import { Coordinate, User, CollectionTag, LocationInformation } from "@element-plus/icons-vue"
+import JobCard from "@/components/JobCard.vue"
+import GradientButton from "@/components/GradientButton.vue"
+import EmptyState from "@/components/EmptyState.vue"
+
+const route = useRoute()
 
 const data = reactive({
-    user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
-    employId: router.currentRoute.value.query.id,
-    employData: {},
-    positionData:[]
+  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  employId: route.query.id,
+  employData: {},
+  positionData: [],
+  name: ''
 })
+
 const loadEmploy = () => {
-    data.employId = router.currentRoute.value.query.id
-    request.get('/employ/selectById/' + data.employId).then(res => {
-        if (res.code === '200') {
-            data.employData = res.data
-        }
-    })
+  request.get('/employ/selectById/' + data.employId).then(res => {
+    if (res.code === '200') {
+      data.employData = res.data
+    }
+  })
 }
+
 const loadPosition = () => {
-    data.employId = router.currentRoute.value.query.id
-    request.get('/position/selectAll',{
-        params: {
-            employId: data.employId,
-            name: data.name,
-            status: "审核通过"
-        }
-    }).then((res) => {
-        if (res.code === '200') {
-            data.positionData = res.data
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+  request.get('/position/selectAll', {
+    params: {
+      employId: data.employId,
+      name: data.name,
+      status: "审核通过"
+    }
+  }).then((res) => {
+    if (res.code === '200') {
+      data.positionData = res.data
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 const reset = () => {
-    data.name = null
-    loadPosition()
+  data.name = ''
+  loadPosition()
 }
 
-const navTo = (url) => {
-    location.href = url
-}
-
-
-loadEmploy()
-loadPosition()
+onMounted(() => {
+  loadEmploy()
+  loadPosition()
+})
 </script>
+
+<style scoped>
+.employ-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.employ-header {
+  position: relative;
+  padding: 60px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.header-bg {
+  position: absolute;
+  inset: 0;
+  background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="40" fill="rgba(255,255,255,0.1)"/></svg>') center/200px repeat;
+  opacity: 0.5;
+}
+
+.header-content {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.employ-info {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.employ-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-md);
+  border: 3px solid rgba(255,255,255,0.3);
+  box-shadow: var(--shadow-lg);
+}
+
+.employ-meta {
+  flex: 1;
+}
+
+.employ-name {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.employ-tags {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.employ-address {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.search-section {
+  max-width: 800px;
+  margin: -30px auto 40px;
+  padding: 0 24px;
+}
+
+.search-box {
+  display: flex;
+  gap: 12px;
+  background: white;
+  padding: 20px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+}
+
+.search-input {
+  flex: 1;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  border-radius: var(--radius-sm);
+}
+
+.jobs-section {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px 60px;
+}
+
+.jobs-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .jobs-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .employ-header {
+    padding: 40px 20px;
+  }
+  
+  .employ-info {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .employ-tags {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .search-box {
+    flex-direction: column;
+  }
+  
+  .jobs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

@@ -99,27 +99,7 @@ const login = () => {
     }
   })
 }
-          
-          console.log('目标路径:', targetPath)
-          router.push(targetPath).then(() => {
-            console.log('跳转成功!')
-          }).catch(err => {
-            console.error('跳转失败:', err)
-            ElMessage.error('页面跳转失败: ' + err.message)
-          })
-        } else {
-          console.error('登录失败:', res.msg)
-          ElMessage.error(res.msg || '登录失败')
-        }
-      }).catch(err => {
-        console.error('请求失败:', err)
-        ElMessage.error('登录请求失败，请检查网络')
-      })
-    } else {
-      console.log('表单验证失败')
-    }
-  })
-}
+      
 </script>
 
 <style scoped>
