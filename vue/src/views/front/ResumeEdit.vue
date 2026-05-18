@@ -414,6 +414,52 @@
         <GradientButton @click="saveProExp">确定</GradientButton>
       </template>
     </el-dialog>
+
+    <!-- Resume preview dialog -->
+    <el-dialog
+      class="resume-preview-dialog"
+      v-model="data.previewVisible"
+      title="简历预览"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div class="resume-preview">
+        <h2>{{ data.previewData.username || data.previewData.name || '未命名简历' }}</h2>
+        <p><strong>简历名称:</strong> {{ data.previewData.name || '-' }}</p>
+        <p><strong>期望薪资:</strong> {{ data.previewData.salary || '-' }}</p>
+        <p><strong>学历:</strong> {{ data.previewData.education || '-' }}</p>
+        <p><strong>工作年限:</strong> {{ data.previewData.experience || '-' }}</p>
+        <p><strong>电话:</strong> {{ data.previewData.phone || '-' }}</p>
+        <p><strong>邮箱:</strong> {{ data.previewData.email || '-' }}</p>
+
+        <h3>教育经历</h3>
+        <div v-if="(data.previewData.eduExpList || []).length">
+          <div v-for="edu in data.previewData.eduExpList" :key="edu.id" class="preview-section">
+            <p>{{ edu.school }} - {{ edu.speciality }} ({{ edu.education }})</p>
+          </div>
+        </div>
+        <p v-else class="preview-empty">暂无教育经历</p>
+
+        <h3>工作经历</h3>
+        <div v-if="(data.previewData.workExpList || []).length">
+          <div v-for="work in data.previewData.workExpList" :key="work.id" class="preview-section">
+            <p>{{ work.employ }} - {{ work.position }}</p>
+          </div>
+        </div>
+        <p v-else class="preview-empty">暂无工作经历</p>
+
+        <h3>项目经历</h3>
+        <div v-if="(data.previewData.proExpList || []).length">
+          <div v-for="pro in data.previewData.proExpList" :key="pro.id" class="preview-section">
+            <p>{{ pro.name }}</p>
+          </div>
+        </div>
+        <p v-else class="preview-empty">暂无项目经历</p>
+      </div>
+      <template #footer>
+        <el-button @click="data.previewVisible = false">关闭</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -440,10 +486,16 @@ const data = reactive({
   eduForm: {},
   workForm: {},
   proForm: {},
-  eduFormVisible: false,
-  workFormVisible: false,
-  proFormVisible: false,
-})
+    eduFormVisible: false,
+    workFormVisible: false,
+    proFormVisible: false,
+    previewVisible: false,
+    previewData: {
+      eduExpList: [],
+      workExpList: [],
+      proExpList: []
+    },
+  })
 
 const isEdit = computed(() => !!data.resumeId)
 
@@ -489,10 +541,8 @@ const preview = () => {
     ElMessage.info('请先填写简历信息')
     return
   }
-  ElMessage.success('预览功能即将上线，先返回简历列表')
-  setTimeout(() => {
-    location.href = '/front/resume'
-  }, 600)
+  data.previewData = JSON.parse(JSON.stringify(data.resumeData))
+  data.previewVisible = true
 }
 
 const addEduExp = () => {
@@ -946,6 +996,68 @@ loadResume()
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+}
+
+:global(.resume-preview-dialog .el-dialog) {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+:global(.resume-preview-dialog .el-dialog__header) {
+  padding: 20px 24px;
+  margin-right: 0;
+  background: var(--gradient-card);
+  border-bottom: 1px solid var(--border-light);
+}
+
+:global(.resume-preview-dialog .el-dialog__title) {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+:global(.resume-preview-dialog .el-dialog__body) {
+  padding: 0;
+}
+
+:global(.resume-preview-dialog .el-dialog__footer) {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.resume-preview {
+  padding: 20px 24px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.resume-preview h2 {
+  margin: 0 0 20px;
+  color: var(--text-primary);
+}
+
+.resume-preview h3 {
+  margin: 20px 0 10px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.resume-preview p {
+  margin: 5px 0;
+  color: var(--text-secondary);
+}
+
+.preview-section {
+  margin-bottom: 12px;
+}
+
+.preview-empty {
+  color: #999;
+  font-size: 14px;
+  margin: 8px 0 0;
 }
 
 .dialog-form :deep(.el-form-item__label) {
