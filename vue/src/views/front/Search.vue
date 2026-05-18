@@ -1,70 +1,145 @@
 <template>
-    <div style="min-height: 550px; background-color: #f6f6f8">
-        <div style="height: 50px"></div>
-        <div style="width: 70%; margin: 0 auto; text-align: center">
-            <el-input size="large" v-model="data.name" clearable @clear="reset" placeholder="请输入您感兴趣的职位" style="width: 500px; margin-right: 5px"></el-input>
-            <el-button size="large" type="primary" @click="loadPosition">搜索</el-button>
-        </div>
-        <div style="height: 50px"></div>
-        <div style="margin: 0 auto; width: 70%">
-            <el-row :gutter="10">
-                <el-col :span="8" v-for="it in data.positionData" style="margin-bottom: 20px">
-                    <div class="card" style="cursor: pointer" @click="navTo('/front/positionDetail?id=' + it.id)">
-                        <div style="display: flex; padding: 0 5px">
-                            <div style="flex: 1; text-align: left; font-size: 16px">{{ it.name }}</div>
-                            <div style="width: 100px; text-align: right; color: red">{{ it.salary }}</div>
-                        </div>
-                        <div style="margin: 10px 0; padding: 0 5px; text-align: left">
-                            <el-tag style="margin-right: 5px" type="info" v-for="tag in it.tagList">{{ tag }}</el-tag>
-                        </div>
-                        <div style="display: flex; align-items: center; padding: 10px 5px">
-                            <div style="width: 35px"><img :src="it.employAvatar" alt="" style="width: 35px; height: 35px; border-radius: 5px; border: 1px solid #cccccc"></div>
-                            <div style="width: 80px; margin-left: 10px">{{ it.employName }}</div>
-                            <div style="flex: 1">{{ it.industryName }}</div>
-                            <div style="width: 80px; text-align: right">{{ it.employStage }}</div>
-                        </div>
-                    </div>
-                </el-col>
-            </el-row>
-        </div>
+  <div class="search-page">
+    <!-- Search Header -->
+    <div class="search-header">
+      <h1 class="page-title">搜索职位</h1>
+      <div class="search-box">
+        <el-input 
+          v-model="data.name" 
+          placeholder="输入职位名称、公司名称" 
+          size="large" 
+          clearable 
+          @clear="reset"
+          class="search-input"
+        />
+        <GradientButton @click="loadPosition">搜索</GradientButton>
+      </div>
     </div>
+    
+    <!-- Search Results -->
+    <div class="search-results">
+      <div v-if="data.positionData.length" class="results-grid">
+        <JobCard v-for="job in data.positionData" :key="job.id" :job="job" />
+      </div>
+      <EmptyState 
+        v-else 
+        icon="🔍" 
+        title="没有找到相关职位" 
+        description="换个关键词试试看"
+        action-text="查看全部职位"
+        @action="reset"
+      />
+    </div>
+  </div>
 </template>
 
 <script setup>
-import {reactive, onMounted} from "vue";
-import request from "@/utils/request.js";
-import {ElMessage} from "element-plus";
-import router from "@/router/index.js";
+import { reactive, onMounted } from "vue"
+import { useRoute } from "vue-router"
+import request from "@/utils/request.js"
+import { ElMessage } from "element-plus"
+import JobCard from "@/components/JobCard.vue"
+import GradientButton from "@/components/GradientButton.vue"
+import EmptyState from "@/components/EmptyState.vue"
+
+const route = useRoute()
 
 const data = reactive({
-    user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
-    positionData: [],
-    name: router.currentRoute.value.query.name,
+  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  positionData: [],
+  name: route.query.name || ''
 })
 
 const loadPosition = () => {
-    request.get('/position/selectAll', {
-        params: {
-            name: data.name,
-            status: '审核通过'
-        }
-    }).then(res => {
-        if (res.code === '200') {
-            data.positionData = res.data
-        } else {
-            ElMessage.error(res.msg)
-        }
-    })
+  request.get('/position/selectAll', {
+    params: {
+      name: data.name,
+      status: '审核通过'
+    }
+  }).then(res => {
+    if (res.code === '200') {
+      data.positionData = res.data
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 const reset = () => {
-    data.name = null
-    loadPosition()
+  data.name = ''
+  loadPosition()
 }
 
-const navTo = (url) => {
-    location.href = url
-}
-
-loadPosition()
+onMounted(() => {
+  loadPosition()
+})
 </script>
+
+<style scoped>
+.search-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 60px 24px;
+}
+
+.search-header {
+  text-align: center;
+  max-width: 800px;
+  margin: 0 auto 60px;
+}
+
+.page-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 32px;
+}
+
+.search-box {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.search-input {
+  flex: 1;
+}
+
+.search-input :deep(.el-input__wrapper) {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+.search-results {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .search-box {
+    flex-direction: column;
+  }
+  
+  .page-title {
+    font-size: 24px;
+  }
+}
+</style>
