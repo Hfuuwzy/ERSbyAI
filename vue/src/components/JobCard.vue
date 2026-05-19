@@ -1,5 +1,8 @@
 <template>
   <div class="job-card" @click="goDetail">
+    <div v-if="matchScore !== null" :class="['match-badge', getMatchClass(matchScore)]">
+      匹配度 {{ matchScore }}%
+    </div>
     <div class="job-card-header">
       <div class="job-name">{{ job.name }}</div>
       <div class="job-salary">{{ job.salary }}</div>
@@ -20,12 +23,28 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   job: {
     type: Object,
     required: true
   }
 })
+
+const normalizeScore = (score) => Math.max(0, Math.min(100, Math.round(Number(score) || 0)))
+
+const matchScore = computed(() => {
+  const value = props.job.matchScore ?? props.job.matchPercent ?? props.job.aiScore ?? props.job.score
+  if (value === null || value === undefined || value === '') return null
+  return normalizeScore(value)
+})
+
+const getMatchClass = (score) => {
+  if (score >= 80) return 'high'
+  if (score >= 60) return 'mid'
+  return 'low'
+}
 
 const goDetail = () => {
   // keep parity with project convention (non-SPA navigation used elsewhere)
@@ -49,6 +68,33 @@ const goDetail = () => {
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
+}
+
+.match-badge {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  z-index: 2;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  border: 1px solid currentColor;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.08);
+}
+
+.match-badge.high {
+  color: #10b981;
+}
+
+.match-badge.mid {
+  color: #f59e0b;
+}
+
+.match-badge.low {
+  color: #ef4444;
 }
 
 .job-card::before {
@@ -78,6 +124,7 @@ const goDetail = () => {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  padding-right: 82px;
 }
 
 .job-name {
