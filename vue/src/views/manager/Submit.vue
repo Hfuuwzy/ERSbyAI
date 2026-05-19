@@ -27,6 +27,24 @@
                         <el-tag v-if="scope.row.status === '已投递'" type="info">{{ scope.row.status }}</el-tag>
                     </template>
                 </el-table-column>
+                <el-table-column prop="aiScore" label="AI评分" width="100">
+                    <template v-slot="scope">
+                        <el-tag v-if="hasAiScore(scope.row.aiScore)" :type="getAiScoreType(scope.row.aiScore)">
+                            {{ scope.row.aiScore }}分
+                        </el-tag>
+                        <span v-else class="text-gray">-</span>
+                    </template>
+                </el-table-column>
+                <el-table-column prop="aiReview" label="AI审核" min-width="200">
+                    <template v-slot="scope">
+                        <div v-if="scope.row.aiReview" class="ai-review-cell">
+                            <el-tooltip :content="scope.row.aiReview" placement="top" :max-width="400">
+                                <span class="ai-review-text">{{ scope.row.aiReview }}</span>
+                            </el-tooltip>
+                        </div>
+                        <span v-else class="text-gray">待审核</span>
+                    </template>
+                </el-table-column>
                 <el-table-column label="操作" width="400" fixed="right" v-if="data.user.role === 'EMPLOY'">
                         <template v-slot="scope">
                             <el-button @click="updateStatus(scope.row, '不适合')" type="danger">不适合</el-button>
@@ -48,8 +66,7 @@
 
 import {reactive} from "vue";
 import request from "@/utils/request.js";
-import {ElMessage, ElMessageBox} from "element-plus";
-import {Delete, Edit} from "@element-plus/icons-vue";
+import {ElMessage} from "element-plus";
 
 
 const data = reactive({
@@ -89,6 +106,15 @@ const updateStatus = (row,status) => {
     })
 }
 
+const getAiScoreType = (score) => {
+    const num = Number(score)
+    if (num >= 80) return 'success'
+    if (num >= 60) return 'warning'
+    return 'danger'
+}
+
+const hasAiScore = (score) => score !== null && score !== undefined && score !== ''
+
 const reset = () => {
     data.positionName = null
     load()
@@ -96,3 +122,23 @@ const reset = () => {
 
 load()
 </script>
+
+<style scoped>
+.text-gray {
+  color: #909399;
+}
+
+.ai-review-cell {
+  width: 100%;
+  overflow: hidden;
+}
+
+.ai-review-text {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+</style>

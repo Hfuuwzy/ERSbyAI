@@ -207,10 +207,7 @@ const handleClick = (industryId) => {
 const loadRecommend = () => {
   request.get('position/recommend').then(res => {
     if (res.code === '200') {
-      data.recommendData = (res.data || []).map((job, index) => ({
-        ...job,
-        matchScore: job.matchScore ?? job.matchPercent ?? job.aiScore ?? Math.max(60, 96 - index * 6)
-      }))
+      data.recommendData = res.data || []
     } else {
       ElMessage.error(res.msg)
     }
