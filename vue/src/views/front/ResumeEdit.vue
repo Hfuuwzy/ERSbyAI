@@ -7,12 +7,22 @@
       <header class="page-header">
         <div class="title-block">
           <h1 class="page-title">{{ isEdit ? '编辑简历' : '创建简历' }}</h1>
-          <p class="page-subtitle">完善你的简历，离心仪 offer 更近一步</p>
+          <div class="subtitle-row">
+            <p class="page-subtitle">完善你的简历，离心仪 offer 更近一步</p>
+            <span v-if="statusText" class="auto-save-status" :class="{ 'is-saving': isSaving }">
+              <span class="status-dot"></span>
+              {{ statusText }}
+            </span>
+          </div>
         </div>
         <div class="header-actions">
           <el-button class="preview-btn" @click="preview">
             <el-icon class="btn-icon"><View /></el-icon>
             预览
+          </el-button>
+          <el-button class="preview-btn" @click="pdfExportVisible = true">
+            <el-icon class="btn-icon"><Download /></el-icon>
+            导出PDF
           </el-button>
           <GradientButton @click="saveResume">
             <el-icon class="btn-icon"><Check /></el-icon>
@@ -460,24 +470,40 @@
         <el-button @click="data.previewVisible = false">关闭</el-button>
       </template>
     </el-dialog>
+
+    <ResumePdfExport v-model:visible="pdfExportVisible" :resume-data="resumeDataForPdf" />
   </div>
 </template>
 
 <script setup>
-import { reactive, computed } from "vue"
+import { reactive, computed, ref, watch, onMounted, onUnmounted } from "vue"
+import { useRoute, useRouter } from "vue-router"
 import request from "@/utils/request.js"
 import { ElMessage, ElMessageBox } from "element-plus"
 import {
-  Edit, Delete, Plus, Calendar, View, Check,
+  Edit, Delete, Plus, Calendar, View, Check, Download,
   School, Briefcase, Folder
 } from "@element-plus/icons-vue"
 import Router from "@/router/index.js"
 import GlassCard from "@/components/GlassCard.vue"
 import GradientButton from "@/components/GradientButton.vue"
+import ResumePdfExport from "@/components/ResumePdfExport.vue"
+import { useAutoSave } from "@/composables/useAutoSave.js"
+import { useDraftRecovery } from "@/composables/useDraftRecovery.js"
+
+const route = useRoute()
+const router = useRouter()
+
+const user = JSON.parse(localStorage.getItem('xm-user') || '{}')
+const { saveDraft, clearDraft, markNeedsSave, statusText, isSaving } = useAutoSave(user.id)
+const { checkAndPromptRecovery } = useDraftRecovery(user.id)
+
+const pdfExportVisible = ref(false)
+const resumeDataForPdf = computed(() => data.resumeData)
 
 const data = reactive({
   resumeId: Router.currentRoute.value.query.id,
-  user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
+  user,
   resumeData: {
     eduExpList: [],
     workExpList: [],
@@ -499,17 +525,33 @@ const data = reactive({
 
 const isEdit = computed(() => !!data.resumeId)
 
-const loadResume = () => {
-  data.resumeId = Router.currentRoute.value.query.id
-  if (data.resumeId) {
-    request.get('resume/selectById/' + data.resumeId).then((res) => {
-      if (res.code === '200') {
-        data.resumeData = res.data
-      } else {
-        ElMessage.error(res.msg)
-      }
-    })
+let autoSaveTimer = null
+
+const debounce = (fn, delay) => {
+  let timer = null
+  return function (...args) {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => fn.apply(this, args), delay)
   }
+}
+
+const debouncedMarkNeedsSave = debounce(() => markNeedsSave(), 300)
+
+watch(() => data.resumeData, () => {
+  debouncedMarkNeedsSave()
+}, { deep: true })
+
+const loadResume = (resumeId) => {
+  const id = resumeId ?? Router.currentRoute.value.query.id
+  data.resumeId = id
+  if (!id) return Promise.resolve()
+  return request.get('resume/selectById/' + id).then((res) => {
+    if (res.code === '200') {
+      data.resumeData = res.data
+    } else {
+      ElMessage.error(res.msg)
+    }
+  })
 }
 
 const saveResume = () => {
@@ -517,18 +559,19 @@ const saveResume = () => {
     request.put('/resume/update', data.resumeData).then((res) => {
       if (res.code === '200') {
         ElMessage.success("保存成功")
+        clearDraft()
+        router.push('/front/resume')
       } else {
         ElMessage.error(res.msg)
       }
     })
   } else {
-    data.resumeData.userId = data.user.id
+    data.resumeData.userId = user.id
     request.post('/resume/add', data.resumeData).then(res => {
       if (res.code === '200') {
         ElMessage.success('保存成功')
-        setTimeout(() => {
-          location.href = '/front/resume'
-        }, 500)
+        clearDraft()
+        router.push('/front/resume')
       } else {
         ElMessage.error(res.msg)
       }
@@ -649,7 +692,34 @@ const delProExp = (id) => {
   }).catch(err => { console.error(err) })
 }
 
-loadResume()
+onMounted(async () => {
+  const resumeId = route.query.id
+
+  if (resumeId) {
+    await loadResume(resumeId)
+    const recovery = await checkAndPromptRecovery(parseInt(resumeId))
+    if (recovery.shouldRecover) {
+      Object.assign(data.resumeData, recovery.data)
+      ElMessage.success('已恢复草稿')
+    }
+  } else {
+    const recovery = await checkAndPromptRecovery(null)
+    if (recovery.shouldRecover) {
+      Object.assign(data.resumeData, recovery.data)
+      ElMessage.success('已恢复之前的草稿')
+    }
+  }
+
+  // Start auto-save timer every 60 seconds
+  autoSaveTimer = setInterval(async () => {
+    const currentResumeId = route.query.id ? parseInt(route.query.id) : null
+    await saveDraft(data.resumeData, currentResumeId)
+  }, 60000)
+})
+
+onUnmounted(() => {
+  if (autoSaveTimer) clearInterval(autoSaveTimer)
+})
 </script>
 
 <style scoped>
@@ -711,6 +781,49 @@ loadResume()
   margin: 0;
   font-size: 14px;
   color: var(--text-secondary);
+}
+
+.subtitle-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.auto-save-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  background: rgba(102, 126, 234, 0.08);
+  border-radius: 999px;
+  border: 1px solid rgba(102, 126, 234, 0.18);
+  transition: all 0.3s ease;
+}
+
+.auto-save-status .status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+}
+
+.auto-save-status.is-saving {
+  color: #6366f1;
+  background: rgba(99, 102, 241, 0.12);
+  border-color: rgba(99, 102, 241, 0.32);
+}
+
+.auto-save-status.is-saving .status-dot {
+  background: #6366f1;
+  animation: auto-save-pulse 1s ease-in-out infinite;
+}
+
+@keyframes auto-save-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
 }
 
 .header-actions {
