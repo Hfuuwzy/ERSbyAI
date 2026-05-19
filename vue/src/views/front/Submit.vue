@@ -8,7 +8,7 @@
     <!-- Tab Navigation -->
     <div class="tab-nav">
       <button 
-        v-for="tab in tabs" 
+        v-for="tab in tabItems" 
         :key="tab.value"
         :class="['tab-btn', { active: activeTab === tab.value }]"
         @click="activeTab = tab.value"
@@ -28,7 +28,7 @@
             </h3>
             <span class="company-name">{{ item.employName }}</span>
           </div>
-          <TagSkill :label="item.status" :variant="getStatusVariant(item.status)" />
+          <TagSkill :label="getStatusLabel(item.status)" :variant="getStatusVariant(item.status)" />
         </div>
         
         <div class="submission-meta">
@@ -36,17 +36,29 @@
           <span class="time">投递于 {{ item.time }}</span>
           <span v-if="item.aiScore" class="ai-score">AI评分: {{ item.aiScore }}分</span>
         </div>
+
+        <div class="submission-steps">
+          <el-steps :active="getActiveStep(item.status)" align-center finish-status="success">
+            <el-step title="已投递" description="简历已提交"></el-step>
+            <el-step title="面试中" description="企业正在推进面试"></el-step>
+            <el-step
+              :title="getFinalStepTitle(item.status)"
+              :description="getFinalStepDescription(item.status)"
+              :status="getFinalStepStatus(item.status)"
+            ></el-step>
+          </el-steps>
+        </div>
         
         <div class="submission-actions">
           <a :href="'/resumeView?id=' + item.resumeId" target="_blank" class="action-link">查看简历</a>
           <el-button 
-            v-if="item.status === '已投递'" 
+            v-if="normalizeStatus(item.status) === '已投递'" 
             type="danger" 
             text 
             size="small"
             @click="cancel(item.id)"
           >
-            取消投递
+            撤回投递
           </el-button>
         </div>
       </GlassCard>
@@ -95,25 +107,86 @@ const activeTab = ref('all')
 const tabs = [
   { value: 'all', label: '全部' },
   { value: '已投递', label: '待处理' },
+  { value: '已查看', label: '已查看' },
   { value: '面试中', label: '面试中' },
-  { value: '通过', label: '已录用' },
+  { value: '通过', label: '已通过' },
   { value: '不适合', label: '已拒绝' },
+  { value: '已撤回', label: '已撤回' },
 ]
+
+const normalizeStatus = (status) => {
+  if (status === '已通过') return '通过'
+  if (status === '已拒绝') return '不适合'
+  return status
+}
+
+const getStatusLabel = (status) => {
+  const map = {
+    '已投递': '已投递',
+    '已查看': '已查看',
+    '面试中': '面试中',
+    '通过': '已通过',
+    '不适合': '已拒绝',
+    '已撤回': '已撤回'
+  }
+  return map[normalizeStatus(status)] || status || '-'
+}
+
+const getActiveStep = (status) => {
+  const current = normalizeStatus(status)
+  if (current === '面试中' || current === '已查看') return 1
+  if (current === '通过' || current === '不适合') return 2
+  return 0
+}
+
+const getFinalStepTitle = (status) => {
+  const current = normalizeStatus(status)
+  if (current === '通过') return '已通过'
+  if (current === '不适合') return '已拒绝/不适合'
+  if (current === '已撤回') return '已撤回'
+  return '结果待定'
+}
+
+const getFinalStepDescription = (status) => {
+  const current = normalizeStatus(status)
+  if (current === '通过') return '恭喜你，已通过筛选'
+  if (current === '不适合') return '本次投递未通过筛选'
+  if (current === '已撤回') return '你已撤回该投递'
+  return '等待企业进一步处理'
+}
+
+const getFinalStepStatus = (status) => {
+  const current = normalizeStatus(status)
+  if (current === '通过') return 'success'
+  if (current === '不适合') return 'error'
+  if (current === '已撤回') return 'process'
+  return 'wait'
+}
+
+const tabItems = computed(() => {
+  return tabs.map(tab => ({
+    ...tab,
+    count: tab.value === 'all'
+      ? data.tableData.length
+      : data.tableData.filter(item => normalizeStatus(item.status) === tab.value).length
+  }))
+})
 
 const filteredData = computed(() => {
   if (activeTab.value === 'all') return data.tableData
-  return data.tableData.filter(item => item.status === activeTab.value)
+  return data.tableData.filter(item => normalizeStatus(item.status) === activeTab.value)
 })
 
 const getStatusVariant = (status) => {
   const map = {
     '已投递': 'default',
+    '已查看': 'blue',
     '面试中': 'blue',
     '通过': 'success',
     '不适合': 'error',
-    '不通过': 'warning'
+    '已撤回': 'info'
   }
-  return map[status] || 'default'
+  return map[normalizeStatus(status)] || 'default'
 }
 
 const loadSubmit = () => {
@@ -135,10 +208,10 @@ const navTo = (url) => {
 }
 
 const cancel = (id) => {
-  ElMessageBox.confirm('确定取消该投递吗？', '提示', { type: 'warning' }).then(() => {
+  ElMessageBox.confirm('确定撤回该投递吗？撤回后记录仍会保留。', '提示', { type: 'warning' }).then(() => {
     request.delete('/submit/delete/' + id).then(res => {
       if (res.code === '200') {
-        ElMessage.success("取消成功")
+        ElMessage.success("撤回成功")
         loadSubmit()
       } else {
         ElMessage.error(res.msg)
@@ -286,6 +359,20 @@ loadSubmit()
 .ai-score {
   color: #10b981;
   font-weight: 500;
+}
+
+.submission-steps {
+  margin: 0 0 16px;
+  padding: 12px 8px 0;
+}
+
+.submission-steps :deep(.el-step__title) {
+  font-size: 14px;
+}
+
+.submission-steps :deep(.el-step__description) {
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .submission-actions {

@@ -35,11 +35,19 @@ public class SubmitController {
     }
 
     /**
-     * 单个删除
+     * 单个撤回
      */
     @DeleteMapping("/delete/{id}")
     public Result delete(@PathVariable Integer id) {
-        submitService.deleteById(id);
+        Submit submit = submitService.selectById(id);
+        if (submit == null) {
+            return Result.error("404", "投递记录不存在");
+        }
+        if (!"已投递".equals(submit.getStatus())) {
+            return Result.error("500", "当前状态不允许撤回");
+        }
+        submit.setStatus("已撤回");
+        submitService.updateById(submit);
         return Result.success();
     }
 
