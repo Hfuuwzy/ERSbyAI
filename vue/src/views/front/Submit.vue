@@ -34,7 +34,47 @@
         <div class="submission-meta">
           <span class="salary">{{ item.salary || '薪资面议' }}</span>
           <span class="time">投递于 {{ item.time }}</span>
-          <span v-if="item.aiScore" class="ai-score">AI评分: {{ item.aiScore }}分</span>
+          <span v-if="hasAiScore(item)" :class="['ai-score', getScoreClass(item.aiScore)]">
+            AI评分: {{ item.aiScore }}分 · {{ getScoreLevel(item.aiScore) }}
+          </span>
+        </div>
+
+        <div v-if="hasAiScore(item) || item.aiReview" class="ai-panel">
+          <div v-if="hasAiScore(item)" class="ai-score-block">
+            <el-progress
+              type="circle"
+              :percentage="normalizeScore(item.aiScore)"
+              :width="72"
+              :stroke-width="8"
+              :color="getScoreColor(item.aiScore)"
+            />
+            <div class="ai-score-text">
+              <div class="ai-score-title">AI匹配评分</div>
+              <el-tag :type="getScoreTagType(item.aiScore)" effect="light">
+                {{ getScoreLevel(item.aiScore) }}
+              </el-tag>
+            </div>
+          </div>
+
+          <div v-if="item.aiReview" class="ai-review-card">
+            <div class="ai-review-title">AI评语</div>
+            <div class="ai-review-content">{{ item.aiReview }}</div>
+          </div>
+
+          <div v-if="hasAiScore(item) || item.aiReview" class="ai-suggestion-grid">
+            <div class="suggestion-card advantage">
+              <div class="suggestion-label">优势</div>
+              <div>{{ getAiAdvice(item).advantage }}</div>
+            </div>
+            <div class="suggestion-card weakness">
+              <div class="suggestion-label">不足</div>
+              <div>{{ getAiAdvice(item).weakness }}</div>
+            </div>
+            <div class="suggestion-card advice">
+              <div class="suggestion-label">建议</div>
+              <div>{{ getAiAdvice(item).advice }}</div>
+            </div>
+          </div>
         </div>
 
         <div class="submission-steps">
@@ -187,6 +227,62 @@ const getStatusVariant = (status) => {
     '已撤回': 'info'
   }
   return map[normalizeStatus(status)] || 'default'
+}
+
+const hasAiScore = (item) => item.aiScore !== null && item.aiScore !== undefined && item.aiScore !== ''
+
+const normalizeScore = (score) => Math.max(0, Math.min(100, Number(score) || 0))
+
+const getScoreLevel = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return '高匹配'
+  if (value >= 60) return '中匹配'
+  return '低匹配'
+}
+
+const getScoreColor = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return '#10b981'
+  if (value >= 60) return '#f59e0b'
+  return '#ef4444'
+}
+
+const getScoreClass = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return 'score-high'
+  if (value >= 60) return 'score-mid'
+  return 'score-low'
+}
+
+const getScoreTagType = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return 'success'
+  if (value >= 60) return 'warning'
+  return 'danger'
+}
+
+const getAiAdvice = (item) => {
+  const score = normalizeScore(item.aiScore)
+  const passed = item.aiReview === '合格' || normalizeStatus(item.status) === '通过'
+  if (score >= 80 || passed) {
+    return {
+      advantage: '简历与岗位要求整体匹配度较高，可重点展示相关项目和技能。',
+      weakness: '仍需补充更量化的成果数据，提升企业筛选效率。',
+      advice: '面试前围绕岗位职责准备2-3个代表性案例。'
+    }
+  }
+  if (score >= 60) {
+    return {
+      advantage: '具备部分岗位相关经历，基础条件有一定契合度。',
+      weakness: '关键技能或项目经历与岗位要求仍有差距。',
+      advice: '优化简历关键词，补充与岗位职责直接相关的经历。'
+    }
+  }
+  return {
+    advantage: '已完成投递，可根据AI反馈继续迭代简历内容。',
+    weakness: '当前简历与该岗位要求匹配度偏低。',
+    advice: '优先投递技能、经验要求更贴近的岗位，或完善相关项目经历。'
+  }
 }
 
 const loadSubmit = () => {
@@ -357,8 +453,92 @@ loadSubmit()
 }
 
 .ai-score {
-  color: #10b981;
   font-weight: 500;
+}
+
+.score-high {
+  color: #10b981;
+}
+
+.score-mid {
+  color: #f59e0b;
+}
+
+.score-low {
+  color: #ef4444;
+}
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  background: rgba(102, 126, 234, 0.04);
+}
+
+.ai-score-block {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.ai-score-text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-score-title,
+.ai-review-title,
+.suggestion-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.ai-review-card {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+}
+
+.ai-review-content {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.ai-suggestion-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.suggestion-card {
+  padding: 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  background: var(--bg-white);
+  border: 1px solid var(--border-light);
+}
+
+.suggestion-card.advantage {
+  border-color: rgba(16, 185, 129, 0.28);
+}
+
+.suggestion-card.weakness {
+  border-color: rgba(245, 158, 11, 0.28);
+}
+
+.suggestion-card.advice {
+  border-color: rgba(102, 126, 234, 0.28);
 }
 
 .submission-steps {
@@ -409,6 +589,14 @@ loadSubmit()
   .submission-meta {
     flex-direction: column;
     gap: 8px;
+  }
+
+  .ai-score-block {
+    align-items: flex-start;
+  }
+
+  .ai-suggestion-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

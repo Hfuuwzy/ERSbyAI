@@ -77,6 +77,34 @@
 
       <!-- Sidebar 30% (sticky) -->
       <aside class="sidebar">
+        <GlassCard :liftable="false" class="match-card">
+          <div class="match-header">
+            <h2 class="match-title">我的匹配度</h2>
+            <el-tag v-if="hasAiScore(data.mySubmit)" :type="getScoreTagType(data.mySubmit.aiScore)" effect="light">
+              {{ getScoreLevel(data.mySubmit.aiScore) }}
+            </el-tag>
+          </div>
+
+          <div v-if="hasAiScore(data.mySubmit)" class="match-content">
+            <el-progress
+              type="dashboard"
+              :percentage="normalizeScore(data.mySubmit.aiScore)"
+              :stroke-width="10"
+              :color="getScoreColor(data.mySubmit.aiScore)"
+            />
+            <div class="match-review">
+              <span class="match-review-label">AI评语</span>
+              <span>{{ data.mySubmit.aiReview || '暂无评语' }}</span>
+            </div>
+            <div class="match-advice">{{ getMatchAdvice(data.mySubmit) }}</div>
+          </div>
+
+          <div v-else class="match-empty">
+            <div class="match-empty-title">投递后生成AI匹配度</div>
+            <p>系统会基于简历和岗位要求生成评分、审核结果与改进建议。</p>
+          </div>
+        </GlassCard>
+
         <GlassCard :liftable="false">
           <div class="company-header">
             <img
@@ -163,6 +191,7 @@ const data = reactive({
   recommendData: [],
   resumeId: null,
   resumeData: [],
+  mySubmit: null,
   formVisible: false,
   form: {}
 })
@@ -221,6 +250,11 @@ const checkExistingSubmit = async () => {
   return (res.data || [])[0] || null
 }
 
+const loadMyMatch = async () => {
+  if (data.user.role !== 'USER' || !data.user.id) return
+  data.mySubmit = await checkExistingSubmit()
+}
+
 const submitInit = async () => {
   if (data.user.role !== 'USER') {
     ElMessage.warning("您的角色不支持此操作")
@@ -255,6 +289,7 @@ const submit = () => {
   request.post('/submit/add', submitData).then((res) => {
     if (res.code === '200') {
       ElMessage.success('岗位投递成功,请在我的投递板块查看投递状态')
+      loadMyMatch()
     } else {
       ElMessage.error(res.msg)
     }
@@ -266,9 +301,42 @@ const navTo = (url) => {
   location.href = url
 }
 
+const hasAiScore = (submit) => submit && submit.aiScore !== null && submit.aiScore !== undefined && submit.aiScore !== ''
+
+const normalizeScore = (score) => Math.max(0, Math.min(100, Number(score) || 0))
+
+const getScoreLevel = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return '高匹配'
+  if (value >= 60) return '中匹配'
+  return '低匹配'
+}
+
+const getScoreColor = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return '#10b981'
+  if (value >= 60) return '#f59e0b'
+  return '#ef4444'
+}
+
+const getScoreTagType = (score) => {
+  const value = normalizeScore(score)
+  if (value >= 80) return 'success'
+  if (value >= 60) return 'warning'
+  return 'danger'
+}
+
+const getMatchAdvice = (submit) => {
+  const score = normalizeScore(submit?.aiScore)
+  if (score >= 80) return '你与该岗位契合度较高，建议重点准备岗位职责相关项目案例。'
+  if (score >= 60) return '你具备部分匹配优势，建议补充关键技能或相关项目经验。'
+  return '当前匹配度偏低，建议完善简历后再尝试同类岗位。'
+}
+
 onMounted(() => {
   loadPosition()
   loadRecommend()
+  loadMyMatch()
 })
 </script>
 
@@ -529,6 +597,76 @@ onMounted(() => {
   position: sticky;
   top: 24px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.match-card {
+  overflow: hidden;
+}
+
+.match-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.match-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.match-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.match-review {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: rgba(102, 126, 234, 0.06);
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.match-review-label {
+  color: var(--text-primary);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.match-advice,
+.match-empty p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.match-empty {
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(102, 126, 234, 0.06);
+  border: 1px solid var(--border-light);
+}
+
+.match-empty-title {
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .company-header {

@@ -27,8 +27,31 @@
                         <el-tag v-if="scope.row.status === '已投递'" type="info">{{ scope.row.status }}</el-tag>
                     </template>
                 </el-table-column>
-              <el-table-column prop="aiScore" label="AI评分"/>
-              <el-table-column prop="aiReview" label="AI审核"/>
+              <el-table-column prop="aiScore" label="AI评分" min-width="170">
+                <template v-slot="scope">
+                  <div v-if="hasAiScore(scope.row)" class="ai-score-cell">
+                    <el-progress
+                      :percentage="normalizeScore(scope.row.aiScore)"
+                      :stroke-width="8"
+                      :color="getScoreColor(scope.row.aiScore)"
+                    />
+                    <el-tag :type="getScoreTagType(scope.row.aiScore)" effect="light" size="small">
+                      {{ getScoreLevel(scope.row.aiScore) }}
+                    </el-tag>
+                  </div>
+                  <span v-else class="empty-text">待评分</span>
+                </template>
+              </el-table-column>
+              <el-table-column prop="aiReview" label="AI审核/建议" min-width="260" show-overflow-tooltip>
+                <template v-slot="scope">
+                  <div class="ai-review-cell">
+                    <el-tag :type="getReviewTagType(scope.row.aiReview)" effect="light" size="small">
+                      {{ scope.row.aiReview || '待审核' }}
+                    </el-tag>
+                    <div class="ai-advice-text">{{ getAiAdvice(scope.row).advice }}</div>
+                  </div>
+                </template>
+              </el-table-column>
               <el-table-column label="操作" width="400" fixed="right" v-if="data.user.role === 'EMPLOY'">
                 <template v-slot="scope">
                   <el-button @click="updateStatus(scope.row, '不适合')" type="danger">不适合</el-button>
@@ -96,5 +119,83 @@ const reset = () => {
     load()
 }
 
+const hasAiScore = (row) => row.aiScore !== null && row.aiScore !== undefined && row.aiScore !== ''
+
+const normalizeScore = (score) => Math.max(0, Math.min(100, Number(score) || 0))
+
+const getScoreLevel = (score) => {
+    const value = normalizeScore(score)
+    if (value >= 80) return '高匹配'
+    if (value >= 60) return '中匹配'
+    return '低匹配'
+}
+
+const getScoreColor = (score) => {
+    const value = normalizeScore(score)
+    if (value >= 80) return '#10b981'
+    if (value >= 60) return '#f59e0b'
+    return '#ef4444'
+}
+
+const getScoreTagType = (score) => {
+    const value = normalizeScore(score)
+    if (value >= 80) return 'success'
+    if (value >= 60) return 'warning'
+    return 'danger'
+}
+
+const getReviewTagType = (review) => {
+    if (review === '合格') return 'success'
+    if (review === '不合格') return 'danger'
+    return 'info'
+}
+
+const getAiAdvice = (row) => {
+    const score = normalizeScore(row.aiScore)
+    const passed = row.aiReview === '合格' || row.status === '通过'
+    if (score >= 80 || passed) {
+        return {
+            advice: '优势明显，建议优先沟通并结合岗位职责安排面试。'
+        }
+    }
+    if (score >= 60) {
+        return {
+            advice: '具备部分匹配点，建议人工复核关键技能和项目经历。'
+        }
+    }
+    return {
+        advice: '匹配度偏低，建议谨慎推进或补充筛选条件后复核。'
+    }
+}
+
 load()
 </script>
+
+<style scoped>
+.ai-score-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ai-score-cell :deep(.el-progress__text) {
+    min-width: 34px;
+}
+
+.ai-review-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.ai-advice-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #666;
+}
+
+.empty-text {
+    color: #999;
+    font-size: 13px;
+}
+</style>
