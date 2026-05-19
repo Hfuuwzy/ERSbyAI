@@ -130,8 +130,26 @@
     <!-- Results -->
     <section class="results-section">
       <div class="results-header">
-        <h2 class="results-title">搜索结果</h2>
-        <span class="results-count">共 {{ data.total }} 个岗位<span v-if="data.total">，当前显示 {{ resultRange }}</span></span>
+        <div>
+          <h2 class="results-title">搜索结果</h2>
+          <span class="results-count">共 {{ data.total }} 个岗位<span v-if="data.total">，当前显示 {{ resultRange }}</span></span>
+        </div>
+        <div class="sort-control">
+          <span class="sort-label">排序</span>
+          <el-select
+            v-model="data.sort"
+            class="sort-select"
+            size="default"
+            @change="handleSortChange"
+          >
+            <el-option
+              v-for="opt in sortOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+        </div>
       </div>
 
       <template v-if="data.positionData.length">
@@ -185,6 +203,7 @@ const data = reactive({
   positionData: [],
   name: '',
   searchHistory: [],
+  sort: 'latest',
   pageNum: 1,
   pageSize: 10,
   total: 0,
@@ -197,10 +216,15 @@ const data = reactive({
 })
 
 const HISTORY_KEY = 'xm-search-history'
-const URL_KEYS = ['name', 'city', 'salary', 'experience', 'education', 'page', 'pageSize']
+const URL_KEYS = ['name', 'city', 'salary', 'experience', 'education', 'sort', 'page', 'pageSize']
 
 const hotTags = ['前端', 'Java', 'Python', 'Vue', 'React', 'UI', '产品', '运营']
 const pageSizes = [10, 20, 50]
+const sortOptions = [
+  { label: '最新发布', value: 'latest' },
+  { label: '薪资从高到低', value: 'salary_desc' },
+  { label: '薪资从低到高', value: 'salary_asc' }
+]
 
 const salaryOptions = ['面议', '5K以下', '5K-10K', '10K-20K', '20K-30K', '30K以上']
 const experienceOptions = ['不限', '应届生', '1年以下', '1-3年', '3-5年', '5-10年', '10年以上']
@@ -235,6 +259,7 @@ const buildQueryFromState = () => {
     const value = getFilterParam(data.filters[key])
     if (value) query[key] = value
   })
+  if (data.sort !== 'latest') query.sort = data.sort
   if (data.pageNum > 1) query.page = String(data.pageNum)
   if (data.pageSize !== 10) query.pageSize = String(data.pageSize)
   return query
@@ -279,6 +304,8 @@ const syncUrlToState = (query = router.currentRoute.value.query) => {
   data.filters.salary = getQueryValue(query.salary)
   data.filters.experience = getQueryValue(query.experience)
   data.filters.education = getQueryValue(query.education)
+  const sort = getQueryValue(query.sort)
+  data.sort = sortOptions.some(option => option.value === sort) ? sort : 'latest'
   data.pageNum = getPositiveNumber(query.page, 1)
   const pageSize = getPositiveNumber(query.pageSize, 10)
   data.pageSize = pageSizes.includes(pageSize) ? pageSize : 10
@@ -309,6 +336,7 @@ const loadPosition = (options = {}) => {
       salary: getFilterParam(data.filters.salary),
       experience: getFilterParam(data.filters.experience),
       education: getFilterParam(data.filters.education),
+      sort: data.sort,
       pageNum: data.pageNum,
       pageSize: data.pageSize
     }
@@ -361,6 +389,11 @@ const handleCurrentChange = (pageNum) => {
 
 const handleSizeChange = (pageSize) => {
   data.pageSize = pageSize
+  data.pageNum = 1
+  loadPosition({ saveHistory: false })
+}
+
+const handleSortChange = () => {
   data.pageNum = 1
   loadPosition({ saveHistory: false })
 }
@@ -613,7 +646,7 @@ loadPosition({ saveHistory: false })
 
 .results-header {
   display: flex;
-  align-items: baseline;
+  align-items: flex-end;
   justify-content: space-between;
   margin-bottom: 24px;
   gap: 12px;
@@ -640,8 +673,27 @@ loadPosition({ saveHistory: false })
 }
 
 .results-count {
+  display: inline-block;
+  margin-top: 8px;
   font-size: 14px;
   color: var(--text-muted);
+}
+
+.sort-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.sort-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.sort-select {
+  width: 150px;
 }
 
 .jobs-grid {
@@ -687,6 +739,8 @@ loadPosition({ saveHistory: false })
   .filter-item { flex: 1 1 100%; }
   .jobs-grid { grid-template-columns: 1fr; }
   .results-header { flex-direction: column; align-items: flex-start; }
+  .sort-control { width: 100%; justify-content: space-between; }
+  .sort-select { width: 180px; }
   .pagination-wrap { justify-content: flex-start; }
 }
 </style>
