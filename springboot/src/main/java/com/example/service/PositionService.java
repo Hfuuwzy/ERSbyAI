@@ -90,9 +90,16 @@ public class PositionService {
     }
 
     public List<Position> selectAll(Position position) {
+        normalizeKeyword(position);
         List<Position> positions = positionMapper.selectAll(position);
         extracted(positions);
         return positions;
+    }
+
+    private static void normalizeKeyword(Position position) {
+        if (position != null && StrUtil.isBlank(position.getName())) {
+            position.setName(null);
+        }
     }
 
     private static void extracted(List<Position> positions) {
@@ -111,12 +118,14 @@ public class PositionService {
     }
 
     public PageInfo<Position> selectPage(Position position, Integer pageNum, Integer pageSize) {
+        normalizeKeyword(position);
         Account currentUser = TokenUtils.getCurrentUser();
         if (currentUser != null && RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
             position.setEmployId(currentUser.getId());
         }
         PageHelper.startPage(pageNum, pageSize);
         List<Position> list = positionMapper.selectAll(position);
+        extracted(list);
         return PageInfo.of(list);
     }
 

@@ -226,9 +226,9 @@ const sortOptions = [
   { label: '薪资从低到高', value: 'salary_asc' }
 ]
 
-const salaryOptions = ['面议', '5k以下', '5-10k', '10-20k', '20-50k', '50k以上']
-const experienceOptions = ['不限', '应届生', '1年以内', '1到3年', '3到5年', '5到10年', '经验不限', '10年以上']
-const educationOptions = ['不限', '高中', '大专', '本科', '硕士', '博士']
+const salaryOptions = ['面议', '3k以下', '3-5k', '5-10k', '10-20k', '20-50k', '50k以上']
+const experienceOptions = ['不限', '应届生', '在校生', '1年以内', '1到3年', '3到5年', '5到10年', '10年以上', '经验不限']
+const educationOptions = ['不限', '初中及以下', '中专/中技', '高中', '大专', '本科', '硕士', '博士', '博士后']
 const cityOptions = ['北京市', '上海市', '合肥市', '广州市', '深圳市', '杭州市', '南京市', '成都市', '武汉市', '西安市']
 
 const resultRange = computed(() => {
@@ -254,7 +254,8 @@ const getFilterParam = (value) => {
 
 const buildQueryFromState = () => {
   const query = {}
-  if (data.name) query.name = data.name
+  const keyword = (data.name || '').trim()
+  if (keyword) query.name = keyword
   Object.keys(data.filters).forEach(key => {
     const value = getFilterParam(data.filters[key])
     if (value) query[key] = value
@@ -324,12 +325,13 @@ const syncStateToUrl = () => {
 }
 
 const loadPosition = (options = {}) => {
+  const keyword = (data.name || '').trim()
   syncStateToUrl()
   if (options.saveHistory !== false) saveHistory()
 
   request.get('/position/selectPage', {
     params: {
-      name: data.name,
+      name: keyword || undefined,
       status: '审核通过',
       city: getFilterParam(data.filters.city),
       employCity: getFilterParam(data.filters.city),
@@ -342,10 +344,23 @@ const loadPosition = (options = {}) => {
     }
   }).then(res => {
     if (res.code === '200') {
-      data.positionData = res.data?.list || []
-      data.total = res.data?.total || 0
-      data.pageNum = res.data?.pageNum || data.pageNum
-      data.pageSize = res.data?.pageSize || data.pageSize
+      const list = res.data?.list || []
+      const total = res.data?.total || 0
+      const pageNum = res.data?.pageNum || data.pageNum
+      const pageSize = res.data?.pageSize || data.pageSize
+
+      if (total > 0 && list.length === 0 && pageNum > 1) {
+        data.total = total
+        data.pageSize = pageSize
+        data.pageNum = Math.ceil(total / pageSize)
+        loadPosition({ saveHistory: false })
+        return
+      }
+
+      data.positionData = list
+      data.total = total
+      data.pageNum = pageNum
+      data.pageSize = pageSize
     } else {
       ElMessage.error(res.msg)
     }
@@ -364,12 +379,13 @@ const clearFilters = () => {
   data.filters.experience = ''
   data.filters.education = ''
   data.pageNum = 1
-  loadPosition({ saveHistory: false })
 }
 
 const clearAll = () => {
+  const shouldLoad = !Object.values(data.filters).some(Boolean)
   data.name = ''
   clearFilters()
+  if (shouldLoad) loadPosition({ saveHistory: false })
 }
 
 const handleSearch = () => {
