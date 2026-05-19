@@ -3,7 +3,7 @@ import {createRouter, createWebHistory} from 'vue-router'
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
-        {path: '/', redirect: '/manager/home'},
+        {path: '/', redirect: '/login'},
         {
             path: '/manager',
             component: () => import('@/views/Manager.vue'),
@@ -44,6 +44,39 @@ const router = createRouter({
         {path: '/resumeView', component: () => import('@/views/ResumeView.vue')},
         {path: '/:pathMatch(.*)', redirect: '/404'}
     ]
+})
+
+const getHomeByRole = (role) => {
+    if (role === 'USER') return '/front/home'
+    if (role === 'ADMIN' || role === 'EMPLOY') return '/manager/home'
+    return '/login'
+}
+
+router.beforeEach((to, from, next) => {
+    const user = JSON.parse(localStorage.getItem('xm-user') || '{}')
+    const token = user.token
+    const role = user.role
+
+    const isLoginPage = to.path === '/login'
+    const isRegisterPage = to.path === '/register'
+    const isPublicPage = isLoginPage || isRegisterPage || to.path === '/404'
+
+    if (!token) {
+        if (isPublicPage) {
+            return next()
+        }
+        return next('/login')
+    }
+
+    if (isPublicPage) {
+        return next(getHomeByRole(role))
+    }
+
+    if (to.path === '/' || to.path === '') {
+        return next(getHomeByRole(role))
+    }
+
+    next()
 })
 
 export default router
