@@ -19,6 +19,21 @@
             <if test="experience != null">and position.experience = #{experience}</if>
             <if test="education != null">and position.education = #{education}</if>
         </where>
+        <choose>
+            <when test="sort == 'salary_desc'">
+                order by cast(regexp_substr(position.salary, '[0-9]+') as unsigned) is null,
+                         cast(regexp_substr(position.salary, '[0-9]+') as unsigned) desc,
+                         position.id desc
+            </when>
+            <when test="sort == 'salary_asc'">
+                order by cast(regexp_substr(position.salary, '[0-9]+') as unsigned) is null,
+                         cast(regexp_substr(position.salary, '[0-9]+') as unsigned) asc,
+                         position.id desc
+            </when>
+            <otherwise>
+                order by position.id desc
+            </otherwise>
+        </choose>
     </select>
 
     <delete id="deleteById">

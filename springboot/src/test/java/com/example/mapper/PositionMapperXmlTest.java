@@ -22,4 +22,16 @@ class PositionMapperXmlTest {
         assertThat(xml).contains("position.experience = #{experience}");
         assertThat(xml).contains("position.education = #{education}");
     }
+
+    @Test
+    void selectAllSupportsSafeSortOptions() throws IOException {
+        String xml = new String(
+                getClass().getClassLoader().getResourceAsStream("mapper/PositionMapper.xml").readAllBytes(),
+                StandardCharsets.UTF_8);
+
+        assertThat(xml).contains("sort == 'salary_desc'");
+        assertThat(xml).contains("sort == 'salary_asc'");
+        assertThat(xml).contains("regexp_substr(position.salary, '[0-9]+'");
+        assertThat(xml).contains("position.id desc");
+    }
 }

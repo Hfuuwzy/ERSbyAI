@@ -27,5 +27,6 @@ public class Position {
     private String industryName;//行业名称
     private List<String> tagList; //标签
     private Boolean aiGenerate;//是否需要ai生成描述
+    private String sort; //搜索排序方式
 
 }
