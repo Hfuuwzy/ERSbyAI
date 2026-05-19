@@ -42,7 +42,8 @@ public class SubmitService {
         submit.setStatus("已投递");
         List<Submit> list = submitMapper.selectByUserIdAndPositionId(submit.getUserId(), submit.getPositionId());
         if (CollectionUtil.isNotEmpty(list)) {
-            throw new CustomException("-1", "您已经投递过该岗位，请勿重复投递！");
+            Submit existing = list.get(0);
+            throw new CustomException("500", "您已投递该职位，当前状态：" + existing.getStatus());
         }
         //进行ai打分和审核
         Resume resume = resumeMapper.selectById(submit.getResumeId());

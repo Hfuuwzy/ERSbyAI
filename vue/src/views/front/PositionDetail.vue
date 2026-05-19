@@ -205,9 +205,30 @@ const collect = () => {
   })
 }
 
-const submitInit = () => {
+const checkExistingSubmit = async () => {
+  const res = await request.get('/submit/selectAll', {
+    params: {
+      userId: data.user.id,
+      positionId: data.positionId
+    }
+  })
+
+  if (res.code !== '200') {
+    ElMessage.error(res.msg)
+    return null
+  }
+
+  return (res.data || [])[0] || null
+}
+
+const submitInit = async () => {
   if (data.user.role !== 'USER') {
     ElMessage.warning("您的角色不支持此操作")
+    return
+  }
+  const existing = await checkExistingSubmit()
+  if (existing) {
+    ElMessage.warning(`当前岗位已投递，状态：${existing.status}`)
     return
   }
   request.get('resume/selectAll', {
