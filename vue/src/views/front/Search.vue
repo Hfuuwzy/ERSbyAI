@@ -23,6 +23,18 @@
           <GradientButton @click="loadPosition">搜索</GradientButton>
         </div>
 
+        <div class="search-history-row" v-if="data.searchHistory.length">
+          <span class="history-label">最近搜索</span>
+          <TagSkill
+            v-for="item in data.searchHistory"
+            :key="item"
+            :label="item"
+            class="history-tag-clickable"
+            @click="searchByHistory(item)"
+          />
+          <button class="history-clear" type="button" @click="clearHistory">清除</button>
+        </div>
+
         <div class="hot-tags-row" v-if="hotTags.length">
           <span class="hot-label">热门搜索</span>
           <TagSkill
@@ -143,7 +155,7 @@
 </template>
 
 <script setup>
-import { reactive, computed } from 'vue'
+import { reactive, computed, nextTick, watch } from 'vue'
 import request from '@/utils/request.js'
 import { ElMessage } from 'element-plus'
 import router from '@/router/index.js'
@@ -156,7 +168,8 @@ import EmptyState from '@/components/EmptyState.vue'
 const data = reactive({
   user: JSON.parse(localStorage.getItem('xm-user') || '{}'),
   positionData: [],
-  name: router.currentRoute.value.query.name,
+  name: '',
+  searchHistory: [],
   filters: {
     city: '',
     salary: '',
@@ -164,6 +177,9 @@ const data = reactive({
     education: ''
   }
 })
+
+const HISTORY_KEY = 'xm-search-history'
+const URL_KEYS = ['name', 'city', 'salary', 'experience', 'education']
 
 const hotTags = ['前端', 'Java', 'Python', 'Vue', 'React', 'UI', '产品', '运营']
 
@@ -189,7 +205,77 @@ const filteredPositions = computed(() => {
   })
 })
 
-const loadPosition = () => {
+const getQueryValue = (value) => {
+  if (Array.isArray(value)) return value[0] || ''
+  return value || ''
+}
+
+const buildQueryFromState = () => {
+  const query = {}
+  if (data.name) query.name = data.name
+  Object.keys(data.filters).forEach(key => {
+    if (data.filters[key]) query[key] = data.filters[key]
+  })
+  return query
+}
+
+const isSameQuery = (currentQuery, nextQuery) => {
+  return URL_KEYS.every(key => getQueryValue(currentQuery[key]) === (nextQuery[key] || ''))
+}
+
+const loadHistory = () => {
+  try {
+    const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]')
+    data.searchHistory = Array.isArray(history) ? history.filter(Boolean).slice(0, 10) : []
+  } catch (e) {
+    data.searchHistory = []
+  }
+}
+
+const saveHistory = () => {
+  const keyword = (data.name || '').trim()
+  if (!keyword) return
+
+  data.searchHistory = [
+    keyword,
+    ...data.searchHistory.filter(item => item !== keyword)
+  ].slice(0, 10)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(data.searchHistory))
+}
+
+const clearHistory = () => {
+  data.searchHistory = []
+  localStorage.removeItem(HISTORY_KEY)
+}
+
+let syncingFromUrl = false
+let syncingToUrl = false
+
+const syncUrlToState = (query = router.currentRoute.value.query) => {
+  syncingFromUrl = true
+  data.name = getQueryValue(query.name)
+  data.filters.city = getQueryValue(query.city)
+  data.filters.salary = getQueryValue(query.salary)
+  data.filters.experience = getQueryValue(query.experience)
+  data.filters.education = getQueryValue(query.education)
+  nextTick(() => {
+    syncingFromUrl = false
+  })
+}
+
+const syncStateToUrl = () => {
+  const query = buildQueryFromState()
+  if (isSameQuery(router.currentRoute.value.query, query)) return
+  syncingToUrl = true
+  router.replace({ query }).finally(() => {
+    syncingToUrl = false
+  })
+}
+
+const loadPosition = (options = {}) => {
+  syncStateToUrl()
+  if (options.saveHistory !== false) saveHistory()
+
   request.get('/position/selectAll', {
     params: {
       name: data.name,
@@ -205,7 +291,7 @@ const loadPosition = () => {
 }
 
 const reset = () => {
-  data.name = null
+  data.name = ''
   loadPosition()
 }
 
@@ -214,7 +300,8 @@ const clearFilters = () => {
   data.filters.salary = ''
   data.filters.experience = ''
   data.filters.education = ''
-  loadPosition()
+  syncStateToUrl()
+  loadPosition({ saveHistory: false })
 }
 
 const searchByTag = (tag) => {
@@ -222,7 +309,33 @@ const searchByTag = (tag) => {
   loadPosition()
 }
 
-loadPosition()
+const searchByHistory = (keyword) => {
+  data.name = keyword
+  loadPosition()
+}
+
+watch(
+  () => router.currentRoute.value.query,
+  (query) => {
+    if (syncingToUrl) return
+    syncUrlToState(query)
+    loadPosition({ saveHistory: false })
+  }
+)
+
+watch(
+  () => data.filters,
+  () => {
+    if (syncingFromUrl) return
+    syncStateToUrl()
+    loadPosition({ saveHistory: false })
+  },
+  { deep: true }
+)
+
+loadHistory()
+syncUrlToState()
+loadPosition({ saveHistory: false })
 </script>
 
 <style scoped>
@@ -339,8 +452,9 @@ loadPosition()
   height: 44px;
 }
 
-/* ===== Hot tags ===== */
-.hot-tags-row {
+/* ===== Hot tags / History ===== */
+.hot-tags-row,
+.search-history-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -349,14 +463,20 @@ loadPosition()
   margin-top: 22px;
 }
 
-.hot-label {
+.search-history-row {
+  margin-top: 14px;
+}
+
+.hot-label,
+.history-label {
   font-size: 13px;
   color: rgba(255, 255, 255, 0.85);
   margin-right: 4px;
   font-weight: 500;
 }
 
-.hot-tag-clickable {
+.hot-tag-clickable,
+.history-tag-clickable {
   cursor: pointer;
   background: rgba(255, 255, 255, 0.18) !important;
   color: #fff !important;
@@ -364,9 +484,24 @@ loadPosition()
   transition: all 0.25s ease;
 }
 
-.hot-tag-clickable:hover {
+.hot-tag-clickable:hover,
+.history-tag-clickable:hover {
   background: rgba(255, 255, 255, 0.32) !important;
   transform: translateY(-2px);
+}
+
+.history-clear {
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 6px;
+}
+
+.history-clear:hover {
+  color: #fff;
+  text-decoration: underline;
 }
 
 /* ===== Filters ===== */
