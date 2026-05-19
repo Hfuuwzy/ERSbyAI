@@ -18,9 +18,9 @@
             class="search-input"
             placeholder="请输入您感兴趣的职位、公司或技能"
             @clear="reset"
-            @keyup.enter="loadPosition"
+            @keyup.enter="handleSearch"
           />
-          <GradientButton @click="loadPosition">搜索</GradientButton>
+          <GradientButton @click="handleSearch">搜索</GradientButton>
         </div>
 
         <div class="search-history-row" v-if="data.searchHistory.length">
@@ -131,16 +131,31 @@
     <section class="results-section">
       <div class="results-header">
         <h2 class="results-title">搜索结果</h2>
-        <span class="results-count">共 {{ filteredPositions.length }} 个岗位</span>
+        <span class="results-count">共 {{ data.total }} 个岗位<span v-if="data.total">，当前显示 {{ resultRange }}</span></span>
       </div>
 
-      <div v-if="filteredPositions.length" class="jobs-grid">
-        <JobCard
-          v-for="job in filteredPositions"
-          :key="job.id"
-          :job="job"
-        />
-      </div>
+      <template v-if="data.positionData.length">
+        <div class="jobs-grid">
+          <JobCard
+            v-for="job in data.positionData"
+            :key="job.id"
+            :job="job"
+          />
+        </div>
+
+        <div class="pagination-wrap">
+          <el-pagination
+            v-model:current-page="data.pageNum"
+            v-model:page-size="data.pageSize"
+            :page-sizes="pageSizes"
+            :total="data.total"
+            layout="total, sizes, prev, pager, next, jumper"
+            background
+            @size-change="handleSizeChange"
+            @current-change="handleCurrentChange"
+          />
+        </div>
+      </template>
 
       <EmptyState
         v-else
@@ -170,6 +185,9 @@ const data = reactive({
   positionData: [],
   name: '',
   searchHistory: [],
+  pageNum: 1,
+  pageSize: 10,
+  total: 0,
   filters: {
     city: '',
     salary: '',
@@ -179,30 +197,21 @@ const data = reactive({
 })
 
 const HISTORY_KEY = 'xm-search-history'
-const URL_KEYS = ['name', 'city', 'salary', 'experience', 'education']
+const URL_KEYS = ['name', 'city', 'salary', 'experience', 'education', 'page', 'pageSize']
 
 const hotTags = ['前端', 'Java', 'Python', 'Vue', 'React', 'UI', '产品', '运营']
+const pageSizes = [10, 20, 50]
 
 const salaryOptions = ['面议', '5K以下', '5K-10K', '10K-20K', '20K-30K', '30K以上']
 const experienceOptions = ['不限', '应届生', '1年以下', '1-3年', '3-5年', '5-10年', '10年以上']
 const educationOptions = ['不限', '高中', '大专', '本科', '硕士', '博士']
+const cityOptions = ['北京市', '上海市', '合肥市', '广州市', '深圳市', '杭州市', '南京市', '成都市', '武汉市', '西安市']
 
-const cityOptions = computed(() => {
-  const set = new Set()
-  data.positionData.forEach(p => {
-    if (p.employCity) set.add(p.employCity)
-  })
-  return Array.from(set)
-})
-
-const filteredPositions = computed(() => {
-  return data.positionData.filter(p => {
-    if (data.filters.city && p.employCity !== data.filters.city) return false
-    if (data.filters.salary && p.salary !== data.filters.salary) return false
-    if (data.filters.experience && p.experience !== data.filters.experience) return false
-    if (data.filters.education && p.education !== data.filters.education) return false
-    return true
-  })
+const resultRange = computed(() => {
+  if (!data.total) return '0-0'
+  const start = (data.pageNum - 1) * data.pageSize + 1
+  const end = Math.min(data.pageNum * data.pageSize, data.total)
+  return `${start}-${end}`
 })
 
 const getQueryValue = (value) => {
@@ -210,12 +219,24 @@ const getQueryValue = (value) => {
   return value || ''
 }
 
+const getPositiveNumber = (value, fallback) => {
+  const number = Number.parseInt(getQueryValue(value), 10)
+  return Number.isFinite(number) && number > 0 ? number : fallback
+}
+
+const getFilterParam = (value) => {
+  return value && value !== '不限' ? value : undefined
+}
+
 const buildQueryFromState = () => {
   const query = {}
   if (data.name) query.name = data.name
   Object.keys(data.filters).forEach(key => {
-    if (data.filters[key]) query[key] = data.filters[key]
+    const value = getFilterParam(data.filters[key])
+    if (value) query[key] = value
   })
+  if (data.pageNum > 1) query.page = String(data.pageNum)
+  if (data.pageSize !== 10) query.pageSize = String(data.pageSize)
   return query
 }
 
@@ -258,6 +279,9 @@ const syncUrlToState = (query = router.currentRoute.value.query) => {
   data.filters.salary = getQueryValue(query.salary)
   data.filters.experience = getQueryValue(query.experience)
   data.filters.education = getQueryValue(query.education)
+  data.pageNum = getPositiveNumber(query.page, 1)
+  const pageSize = getPositiveNumber(query.pageSize, 10)
+  data.pageSize = pageSizes.includes(pageSize) ? pageSize : 10
   nextTick(() => {
     syncingFromUrl = false
   })
@@ -276,14 +300,24 @@ const loadPosition = (options = {}) => {
   syncStateToUrl()
   if (options.saveHistory !== false) saveHistory()
 
-  request.get('/position/selectAll', {
+  request.get('/position/selectPage', {
     params: {
       name: data.name,
-      status: '审核通过'
+      status: '审核通过',
+      city: getFilterParam(data.filters.city),
+      employCity: getFilterParam(data.filters.city),
+      salary: getFilterParam(data.filters.salary),
+      experience: getFilterParam(data.filters.experience),
+      education: getFilterParam(data.filters.education),
+      pageNum: data.pageNum,
+      pageSize: data.pageSize
     }
   }).then(res => {
     if (res.code === '200') {
-      data.positionData = res.data
+      data.positionData = res.data?.list || []
+      data.total = res.data?.total || 0
+      data.pageNum = res.data?.pageNum || data.pageNum
+      data.pageSize = res.data?.pageSize || data.pageSize
     } else {
       ElMessage.error(res.msg)
     }
@@ -292,7 +326,8 @@ const loadPosition = (options = {}) => {
 
 const reset = () => {
   data.name = ''
-  loadPosition()
+  data.pageNum = 1
+  loadPosition({ saveHistory: false })
 }
 
 const clearFilters = () => {
@@ -300,18 +335,34 @@ const clearFilters = () => {
   data.filters.salary = ''
   data.filters.experience = ''
   data.filters.education = ''
-  syncStateToUrl()
+  data.pageNum = 1
   loadPosition({ saveHistory: false })
+}
+
+const handleSearch = () => {
+  data.pageNum = 1
+  loadPosition()
 }
 
 const searchByTag = (tag) => {
   data.name = tag
-  loadPosition()
+  handleSearch()
 }
 
 const searchByHistory = (keyword) => {
   data.name = keyword
-  loadPosition()
+  handleSearch()
+}
+
+const handleCurrentChange = (pageNum) => {
+  data.pageNum = pageNum
+  loadPosition({ saveHistory: false })
+}
+
+const handleSizeChange = (pageSize) => {
+  data.pageSize = pageSize
+  data.pageNum = 1
+  loadPosition({ saveHistory: false })
 }
 
 watch(
@@ -327,7 +378,7 @@ watch(
   () => data.filters,
   () => {
     if (syncingFromUrl) return
-    syncStateToUrl()
+    data.pageNum = 1
     loadPosition({ saveHistory: false })
   },
   { deep: true }
@@ -604,6 +655,18 @@ loadPosition({ saveHistory: false })
   width: 100%;
 }
 
+.pagination-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 32px;
+}
+
+.pagination-wrap :deep(.el-pagination) {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 960px) {
   .hero-title { font-size: 32px; }
@@ -624,5 +687,6 @@ loadPosition({ saveHistory: false })
   .filter-item { flex: 1 1 100%; }
   .jobs-grid { grid-template-columns: 1fr; }
   .results-header { flex-direction: column; align-items: flex-start; }
+  .pagination-wrap { justify-content: flex-start; }
 }
 </style>
