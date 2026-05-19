@@ -9,7 +9,11 @@
         left join employ on position.employ_id = employ.id
         left join industry on position.industry_id = industry.id
         <where>
-            <if test="name != null">and position.name like concat('%', #{name}, '%')</if>
+            <if test="name != null">
+                and (position.name like concat('%', #{name}, '%')
+                     or employ.name like concat('%', #{name}, '%')
+                     or position.tags like concat('%', #{name}, '%'))
+            </if>
             <if test="employName != null">and employ.name = #{employName}</if>
             <if test="employId != null">and position.employ_id = #{employId}</if>
             <if test="industryId != null">and position.industry_id = #{industryId}</if>

@@ -115,6 +115,7 @@
 import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import request from '@/utils/request.js'
 import { ElMessage } from 'element-plus'
+import router from '@/router/index.js'
 import GradientButton from '@/components/GradientButton.vue'
 import JobCard from '@/components/JobCard.vue'
 
@@ -214,7 +215,12 @@ const loadRecommend = () => {
 }
 
 const search = () => {
-  location.href = '/front/search?name=' + (data.name || '')
+  if (data.name?.trim()) {
+    router.push({
+      path: '/front/search',
+      query: { name: data.name.trim() }
+    })
+  }
 }
 
 const navTo = (url) => {

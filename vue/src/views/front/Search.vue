@@ -181,7 +181,7 @@
         title="没有找到匹配的岗位"
         description="试着换个关键词或者重置筛选条件"
         action-text="重置筛选"
-        @action="clearFilters"
+        @action="clearAll"
       />
     </section>
   </div>
@@ -226,8 +226,8 @@ const sortOptions = [
   { label: '薪资从低到高', value: 'salary_asc' }
 ]
 
-const salaryOptions = ['面议', '5K以下', '5K-10K', '10K-20K', '20K-30K', '30K以上']
-const experienceOptions = ['不限', '应届生', '1年以下', '1-3年', '3-5年', '5-10年', '10年以上']
+const salaryOptions = ['面议', '5k以下', '5-10k', '10-20k', '20-50k', '50k以上']
+const experienceOptions = ['不限', '应届生', '1年以内', '1到3年', '3到5年', '5到10年', '经验不限', '10年以上']
 const educationOptions = ['不限', '高中', '大专', '本科', '硕士', '博士']
 const cityOptions = ['北京市', '上海市', '合肥市', '广州市', '深圳市', '杭州市', '南京市', '成都市', '武汉市', '西安市']
 
@@ -365,6 +365,11 @@ const clearFilters = () => {
   data.filters.education = ''
   data.pageNum = 1
   loadPosition({ saveHistory: false })
+}
+
+const clearAll = () => {
+  data.name = ''
+  clearFilters()
 }
 
 const handleSearch = () => {
