@@ -205,15 +205,36 @@
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item @click="updateStatus(scope.row, '面试中')" v-if="scope.row.status === '已投递'">
-                    <el-icon><Check /></el-icon>安排面试
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="updateStatus(scope.row, '通过')" v-if="scope.row.status === '面试中'">
-                    <el-icon><CircleCheck /></el-icon>录用
-                  </el-dropdown-item>
-                  <el-dropdown-item @click="updateStatus(scope.row, '不适合')" divided>
-                    <el-icon><CircleClose /></el-icon>标记不适合
-                  </el-dropdown-item>
+                  <!-- 根据当前状态显示可用操作 -->
+                  <template v-if="scope.row.status === '已投递'">
+                    <el-dropdown-item @click="updateStatus(scope.row, '面试中')">
+                      <el-icon><Check /></el-icon>安排面试
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="updateStatus(scope.row, '通过')">
+                      <el-icon><CircleCheck /></el-icon>直接录用
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="updateStatus(scope.row, '不适合')" divided>
+                      <el-icon><CircleClose /></el-icon>标记不适合
+                    </el-dropdown-item>
+                  </template>
+                  <template v-else-if="scope.row.status === '面试中'">
+                    <el-dropdown-item @click="updateStatus(scope.row, '通过')">
+                      <el-icon><CircleCheck /></el-icon>录用
+                    </el-dropdown-item>
+                    <el-dropdown-item @click="updateStatus(scope.row, '不通过')">
+                      <el-icon><CircleClose /></el-icon>面试不通过
+                    </el-dropdown-item>
+                  </template>
+                  <template v-else-if="scope.row.status === '不通过' || scope.row.status === '不适合'">
+                    <el-dropdown-item disabled>
+                      <el-icon><InfoFilled /></el-icon>已结束
+                    </el-dropdown-item>
+                  </template>
+                  <template v-else-if="scope.row.status === '通过'">
+                    <el-dropdown-item disabled>
+                      <el-icon><SuccessFilled /></el-icon>已通过
+                    </el-dropdown-item>
+                  </template>
                 </el-dropdown-menu>
               </template>
             </el-dropdown>
@@ -237,7 +258,7 @@
 </template>
 
 <script setup>
-import { reactive } from "vue";
+import { reactive, watch } from "vue";
 import request from "@/utils/request.js";
 import { ElMessage } from "element-plus";
 import { 
@@ -251,7 +272,9 @@ import {
   List,
   ArrowDown,
   Check,
-  CircleClose
+  CircleClose,
+  InfoFilled,
+  SuccessFilled
 } from "@element-plus/icons-vue";
 
 const data = reactive({
@@ -377,18 +400,21 @@ const getScoreClass = (score) => {
 
 const getReviewTagType = (review) => {
   if (!review) return 'info';
-  if (review.includes('不适合')) return 'danger';
-  if (review.includes('适合')) return 'success';
-  if (review.includes('一般')) return 'warning';
+  if (review.includes('不合格') || review.includes('不适合')) return 'danger';
+  if (review.includes('合格') || review.includes('适合')) return 'success';
+  if (review.includes('一般') || review.includes('待提升')) return 'warning';
   return 'info';
 };
 
 const getShortReview = (review) => {
   if (!review) return '待审核';
-  if (review.includes('不适合')) return '不适合';
-  if (review.includes('适合')) return '适合';
+  // 支持多种评价格式
+  if (review.includes('不合格') || review.includes('不适合')) return '不适合';
+  if (review.includes('合格') || review.includes('适合')) return '适合';
   if (review.includes('一般')) return '一般';
-  return '审核中';
+  if (review.includes('待提升')) return '待提升';
+  // 返回原文前几个字
+  return review.length > 4 ? review.substring(0, 4) + '...' : review;
 };
 
 const getStatusTagType = (status) => {
@@ -400,6 +426,19 @@ const getStatusTagType = (status) => {
     default: return 'info';
   }
 };
+
+// 热查询 - 监听筛选条件变化
+watch(
+  () => [data.positionName, data.scoreFilter, data.reviewFilter],
+  ([newPositionName, newScoreFilter, newReviewFilter], [oldPositionName, oldScoreFilter, oldReviewFilter]) => {
+    // 只有当筛选条件真正改变时才触发查询（避免初始化时重复加载）
+    if (newPositionName !== oldPositionName || newScoreFilter !== oldScoreFilter || newReviewFilter !== oldReviewFilter) {
+      data.pageNum = 1; // 重置到第一页
+      load();
+    }
+  },
+  { immediate: false }
+);
 
 load();
 </script>
