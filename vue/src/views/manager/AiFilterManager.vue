@@ -95,29 +95,6 @@
             </el-option>
           </el-select>
         </div>
-        <div class="filter-item">
-          <span class="filter-label">AI审核</span>
-          <el-select 
-            v-model="data.reviewFilter" 
-            placeholder="选择审核结果"
-            clearable
-            style="width: 140px"
-          >
-            <el-option label="全部" value="" />
-            <el-option label="适合" value="适合">
-              <el-tag type="success" size="small">适合</el-tag>
-            </el-option>
-            <el-option label="不适合" value="不适合">
-              <el-tag type="danger" size="small">不适合</el-tag>
-            </el-option>
-            <el-option label="一般" value="一般">
-              <el-tag type="warning" size="small">一般</el-tag>
-            </el-option>
-            <el-option label="待审核" value="待审核">
-              <el-tag type="info" size="small">待审核</el-tag>
-            </el-option>
-          </el-select>
-        </div>
         <div class="filter-actions">
           <el-button type="primary" @click="load">
             <el-icon><Search /></el-icon>
@@ -285,7 +262,6 @@ const data = reactive({
   total: 0,
   positionName: null,
   scoreFilter: '',
-  reviewFilter: '',
   avgScore: '-',
   excellentRate: '-',
   suitableRate: '-',
@@ -314,13 +290,6 @@ const load = () => {
             case 'unscored': return !hasAiScore(item);
             default: return true;
           }
-        });
-      }
-      
-      if (data.reviewFilter) {
-        list = list.filter(item => {
-          if (data.reviewFilter === '待审核') return !item.aiReview;
-          return item.aiReview && item.aiReview.includes(data.reviewFilter);
         });
       }
       
@@ -381,7 +350,6 @@ const updateStatus = (row, status) => {
 const reset = () => {
   data.positionName = null;
   data.scoreFilter = '';
-  data.reviewFilter = '';
   data.pageNum = 1;
   load();
 };
@@ -429,10 +397,10 @@ const getStatusTagType = (status) => {
 
 // 热查询 - 监听筛选条件变化
 watch(
-  () => [data.positionName, data.scoreFilter, data.reviewFilter],
-  ([newPositionName, newScoreFilter, newReviewFilter], [oldPositionName, oldScoreFilter, oldReviewFilter]) => {
+  () => [data.positionName, data.scoreFilter],
+  ([newPositionName, newScoreFilter], [oldPositionName, oldScoreFilter]) => {
     // 只有当筛选条件真正改变时才触发查询（避免初始化时重复加载）
-    if (newPositionName !== oldPositionName || newScoreFilter !== oldScoreFilter || newReviewFilter !== oldReviewFilter) {
+    if (newPositionName !== oldPositionName || newScoreFilter !== oldScoreFilter) {
       data.pageNum = 1; // 重置到第一页
       load();
     }
