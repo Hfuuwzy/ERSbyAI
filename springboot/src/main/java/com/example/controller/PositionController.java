@@ -90,6 +90,13 @@ public class PositionController {
         return Result.success(list);
     }
 
+    @GetMapping("/recommendV2")
+    public Result recommendV2(@RequestParam Integer userId, 
+                              @RequestParam(defaultValue = "hybrid") String strategy) {
+        List<Position> list = positionService.recommendV2(userId, strategy);
+        return Result.success(list);
+    }
+
     /**
      * AI推荐求职者
      * @param positionId

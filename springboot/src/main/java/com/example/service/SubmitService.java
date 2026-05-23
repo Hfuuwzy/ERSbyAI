@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.DateUtil;
 import com.example.common.enums.RoleEnum;
 import com.example.entity.Account;
+import com.example.entity.BatchUpdateForm;
 import com.example.entity.Position;
 import com.example.entity.Resume;
 import com.example.entity.Submit;
@@ -109,6 +110,37 @@ public class SubmitService {
         if (currentUser != null && RoleEnum.USER.name().equals(currentUser.getRole())) {
             submit.setUserId(currentUser.getId());
         }
+        if (currentUser != null && RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
+            submit.setEmployId(currentUser.getId());
+        }
+        PageHelper.startPage(pageNum, pageSize);
+        List<Submit> list = submitMapper.selectAll(submit);
+        return PageInfo.of(list);
+    }
+
+    public void batchUpdate(BatchUpdateForm form) {
+        if (CollectionUtil.isEmpty(form.getIds())) {
+            return;
+        }
+        submitMapper.batchUpdate(form.getIds(), form.getStatus());
+    }
+
+}
+        if (currentUser != null && RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
+            submit.setEmployId(currentUser.getId());
+        }
+        PageHelper.startPage(pageNum, pageSize);
+        List<Submit> list = submitMapper.selectAll(submit);
+        return PageInfo.of(list);
+    }
+
+    public void batchUpdate(BatchUpdateForm form) {
+        if (CollectionUtil.isEmpty(form.getIds()) || form.getStatus() == null) {
+            return;
+        }
+        submitMapper.updateBatch(form.getIds(), form.getStatus());
+    }
+}
         if (currentUser != null && RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
             submit.setEmployId(currentUser.getId());
         }
