@@ -10,6 +10,7 @@ import com.example.entity.*;
 import com.example.exception.CustomException;
 import com.example.mapper.*;
 import com.example.utils.AiUtil;
+import com.example.utils.ItemCF;
 import com.example.utils.TokenUtils;
 import com.example.utils.UserCF;
 import com.github.pagehelper.PageHelper;
@@ -20,8 +21,14 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -29,6 +36,11 @@ import java.util.stream.Collectors;
  */
 @Service
 public class PositionService {
+
+    private static final int RECOMMEND_LIMIT = 10;
+    private static final double USERCF_WEIGHT = 0.5D;
+    private static final double ITEMCF_WEIGHT = 0.3D;
+    private static final double CONTENT_WEIGHT = 0.2D;
 
     @Resource
     private PositionMapper positionMapper;
