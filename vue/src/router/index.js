@@ -76,7 +76,19 @@ router.beforeEach((to, from, next) => {
         return next(getHomeByRole(role))
     }
 
+    // 添加全局错误处理，监控token过期
+    window.addEventListener('unhandledrejection', handleTokenError)
+    
     next()
 })
+
+// 处理token过期错误
+const handleTokenError = (event) => {
+    const error = event.reason
+    if (error && error.response && error.response.status === 401) {
+        // 阻止默认处理
+        event.preventDefault()
+    }
+}
 
 export default router
