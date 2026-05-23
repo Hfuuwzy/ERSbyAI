@@ -98,4 +98,5 @@ public class SubmitController {
         submitService.batchUpdate(form);
         return Result.success();
     }
+
 }
