@@ -63,6 +63,16 @@
             <el-tag v-else type="info">{{ scope.row.status }}</el-tag>
           </template>
         </el-table-column>
+        <el-table-column prop="aiReview" label="AI建议" min-width="200" show-overflow-tooltip>
+          <template #default="scope">
+            <div v-if="scope.row.aiReview" class="ai-suggestion">
+              <el-tag :type="getReviewTagType(scope.row.aiReview)" size="small" effect="light">
+                {{ scope.row.aiReview.length > 20 ? scope.row.aiReview.substring(0, 20) + '...' : scope.row.aiReview }}
+              </el-tag>
+            </div>
+            <span v-else class="no-ai-review">待AI审核</span>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="400" fixed="right" v-if="data.user.role === 'EMPLOY'">
           <template #default="scope">
             <el-button @click="updateStatus(scope.row, '不适合')" type="danger" size="small">不适合</el-button>
@@ -172,8 +182,26 @@ const reset = () => {
   load();
 };
 
+// AI Review helper
+const getReviewTagType = (review) => {
+  if (!review) return 'info';
+  if (review.includes('不适合')) return 'danger';
+  if (review.includes('适合')) return 'success';
+  if (review.includes('一般')) return 'warning';
+  return 'info';
+};
+
 load();
 </script>
 
 <style scoped>
+.ai-suggestion {
+  display: flex;
+  align-items: center;
+}
+
+.no-ai-review {
+  color: #909399;
+  font-size: 12px;
+}
 </style>
