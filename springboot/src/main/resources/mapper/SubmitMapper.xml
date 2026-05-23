@@ -64,6 +64,7 @@
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+        and employ_id = #{employId}
     </update>
 
 </mapper>

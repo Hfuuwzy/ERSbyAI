@@ -17,6 +17,10 @@ public interface ResumeMapper {
             "where resume.id = #{id}")
     Resume selectById(Integer id);
 
+    @Select("select resume.*, user.avatar as userAvatar from `resume` left join user on resume.user_id = user.id " +
+            "where resume.user_id = #{userId} limit 1")
+    Resume selectByUserId(Integer userId);
+
     List<Resume> selectAll(Resume resume);
 
 }

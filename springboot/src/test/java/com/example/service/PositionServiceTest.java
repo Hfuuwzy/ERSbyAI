@@ -6,6 +6,7 @@ import com.example.entity.Submit;
 import com.example.entity.User;
 import com.example.mapper.CollectMapper;
 import com.example.mapper.PositionMapper;
+import com.example.mapper.ResumeMapper;
 import com.example.mapper.SubmitMapper;
 import com.example.mapper.UserMapper;
 import org.junit.jupiter.api.Test;
@@ -33,6 +34,8 @@ class PositionServiceTest {
     private CollectMapper collectMapper;
     @Mock
     private SubmitMapper submitMapper;
+    @Mock
+    private ResumeMapper resumeMapper;
 
     @InjectMocks
     private PositionService positionService;
@@ -94,6 +97,11 @@ class PositionServiceTest {
         when(userMapper.selectAll(any(User.class))).thenReturn(users);
         when(collectMapper.selectAll(any(Collect.class))).thenReturn(collects);
         when(submitMapper.selectAll(any(Submit.class))).thenReturn(submits);
+    }
+
+    private void stubRecommendationDataWithResume(List<Position> positions, List<User> users, List<Collect> collects, List<Submit> submits, com.example.entity.Resume resume) {
+        stubRecommendationData(positions, users, collects, submits);
+        when(resumeMapper.selectByUserId(any())).thenReturn(resume);
     }
 
     private Position position(Integer id, String name, String tags, Integer industryId, String type, String education, String experience) {

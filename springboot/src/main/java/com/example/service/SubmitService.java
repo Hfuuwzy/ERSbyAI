@@ -126,7 +126,7 @@ public class SubmitService {
         if (currentUser == null || !RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
             return;
         }
-        submitMapper.updateBatch(form.getIds(), form.getStatus());
+        submitMapper.updateBatch(form.getIds(), form.getStatus(), currentUser.getId());
     }
 
 }

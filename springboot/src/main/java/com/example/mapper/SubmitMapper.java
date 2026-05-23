@@ -22,5 +22,5 @@ public interface SubmitMapper {
     @Select("select * from submit where user_id = #{userId} and position_id = #{positionId}")
     List<Submit> selectByUserIdAndPositionId(@Param("userId") Integer userId, @Param("positionId") Integer positionId);
 
-    int updateBatch(@Param("ids") List<Integer> ids, @Param("status") String status);
+    int updateBatch(@Param("ids") List<Integer> ids, @Param("status") String status, @Param("employId") Integer employId);
 }

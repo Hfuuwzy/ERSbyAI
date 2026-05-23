@@ -224,7 +224,7 @@ public class PositionService {
                 positionIds = ItemCF.recommend(userId, data, RECOMMEND_LIMIT);
                 break;
             case "content":
-                positionIds = recommendByContentBased(userId, positions);
+                positionIds = recommendByContentBased(userId, positions, collects, submits);
                 break;
             case "hybrid":
             default:
@@ -286,7 +286,7 @@ public class PositionService {
         Map<Integer, Double> scoreMap = new HashMap<>();
         addWeightedScore(scoreMap, UserCF.recommend(userId, data), USERCF_WEIGHT);
         addWeightedScore(scoreMap, ItemCF.recommend(userId, data, RECOMMEND_LIMIT), ITEMCF_WEIGHT);
-        addWeightedScore(scoreMap, recommendByContentBased(userId, positions), CONTENT_WEIGHT);
+        addWeightedScore(scoreMap, recommendByContentBased(userId, positions, collects, submits), CONTENT_WEIGHT);
         return rankScoreMap(scoreMap);
     }
 
@@ -304,15 +304,15 @@ public class PositionService {
         }
     }
 
-    private List<Integer> recommendByContentBased(Integer userId, List<Position> positions) {
+    private List<Integer> recommendByContentBased(Integer userId, List<Position> positions, List<Collect> collects, List<Submit> submits) {
         if (userId == null) {
             return Collections.emptyList();
         }
-        Resume resume = resumeMapper.selectById(userId);
-        if (resume == null) {
-            return Collections.emptyList();
+        Resume resume = resumeMapper.selectByUserId(userId);
+        if (resume != null) {
+            return ContentBased.recommend(userId, positions, resume);
         }
-        return ContentBased.recommend(userId, positions, resume);
+        return recommendByContent(userId, positions, collects, submits);
     }
 
     private List<Integer> recommendByContent(Integer userId, List<Position> positions, List<Collect> collects, List<Submit> submits) {
