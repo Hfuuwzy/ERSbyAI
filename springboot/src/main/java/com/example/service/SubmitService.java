@@ -119,34 +119,10 @@ public class SubmitService {
     }
 
     public void batchUpdate(BatchUpdateForm form) {
-        if (CollectionUtil.isEmpty(form.getIds())) {
-            return;
-        }
-        submitMapper.batchUpdate(form.getIds(), form.getStatus());
-    }
-
-}
-        if (currentUser != null && RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
-            submit.setEmployId(currentUser.getId());
-        }
-        PageHelper.startPage(pageNum, pageSize);
-        List<Submit> list = submitMapper.selectAll(submit);
-        return PageInfo.of(list);
-    }
-
-    public void batchUpdate(BatchUpdateForm form) {
         if (CollectionUtil.isEmpty(form.getIds()) || form.getStatus() == null) {
             return;
         }
         submitMapper.updateBatch(form.getIds(), form.getStatus());
-    }
-}
-        if (currentUser != null && RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
-            submit.setEmployId(currentUser.getId());
-        }
-        PageHelper.startPage(pageNum, pageSize);
-        List<Submit> list = submitMapper.selectAll(submit);
-        return PageInfo.of(list);
     }
 
 }
