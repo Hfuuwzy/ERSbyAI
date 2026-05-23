@@ -24,7 +24,21 @@ public class FileController {
 
     private static final Logger log = LoggerFactory.getLogger(FileController.class);
 
-    private static final String filePath = System.getProperty("user.dir") + "/files/";
+    // 修改为指向项目根目录的files文件夹
+    private static final String filePath = getProjectRootPath() + "/files/";
+    
+    /**
+     * 获取项目根目录路径
+     * 支持从springboot子目录或根目录启动
+     */
+    private static String getProjectRootPath() {
+        String userDir = System.getProperty("user.dir");
+        // 如果在springboot目录下，返回到父目录（项目根目录）
+        if (userDir.endsWith("springboot") || userDir.endsWith("springboot/") || userDir.endsWith("springboot\\")) {
+            return new java.io.File(userDir).getParent();
+        }
+        return userDir;
+    }
 
     @Value("${fileBaseUrl:}")
     private String fileBaseUrl;
