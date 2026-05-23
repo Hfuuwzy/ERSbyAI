@@ -29,8 +29,14 @@ request.interceptors.response.use(
         }
         // 当权限验证不通过的时候给出提示
         if (res.code === '401') {
-            ElMessage.error(res.msg)
-            router.push('/login')
+            ElMessage.error(res.msg || '登录已过期，请重新登录')
+            // 清除本地存储的用户信息
+            localStorage.removeItem('xm-user')
+            // 跳转到登录页
+            setTimeout(() => {
+                window.location.href = '/login'
+            }, 1500)
+            return Promise.reject(new Error(res.msg || '登录已过期'))
         }
         // 兼容服务端返回的字符串数据
         if (typeof res === 'string') {
@@ -39,11 +45,22 @@ request.interceptors.response.use(
         return res;
     },
     error => {
-        if (error.response.status === 404) {
-            ElMessage.error('未找到请求接口')
-        } else if (error.response.status === 500) {
-            ElMessage.error('系统异常，请查看后端控制台报错')
+        if (error.response) {
+            if (error.response.status === 401) {
+                ElMessage.error('登录已过期，请重新登录')
+                localStorage.removeItem('xm-user')
+                setTimeout(() => {
+                    window.location.href = '/login'
+                }, 1500)
+            } else if (error.response.status === 404) {
+                ElMessage.error('未找到请求接口')
+            } else if (error.response.status === 500) {
+                ElMessage.error('系统异常，请查看后端控制台报错')
+            } else {
+                ElMessage.error(error.response.data?.msg || '请求失败')
+            }
         } else {
+            ElMessage.error('网络错误，请检查网络连接')
             console.error(error.message)
         }
         return Promise.reject(error)
