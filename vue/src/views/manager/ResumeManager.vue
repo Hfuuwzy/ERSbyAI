@@ -229,8 +229,8 @@ const getScoreLevel = (score) => {
 
 const getReviewTagType = (review) => {
   if (!review) return 'info';
-  if (review.includes('适合')) return 'success';
   if (review.includes('不适合')) return 'danger';
+  if (review.includes('适合')) return 'success';
   if (review.includes('一般')) return 'warning';
   return 'info';
 };

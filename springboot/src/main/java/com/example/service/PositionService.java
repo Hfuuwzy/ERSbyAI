@@ -10,6 +10,7 @@ import com.example.entity.*;
 import com.example.exception.CustomException;
 import com.example.mapper.*;
 import com.example.utils.AiUtil;
+import com.example.utils.ContentBased;
 import com.example.utils.ItemCF;
 import com.example.utils.TokenUtils;
 import com.example.utils.UserCF;
@@ -223,7 +224,7 @@ public class PositionService {
                 positionIds = ItemCF.recommend(userId, data, RECOMMEND_LIMIT);
                 break;
             case "content":
-                positionIds = recommendByContent(userId, positions, collects, submits);
+                positionIds = recommendByContentBased(userId, positions);
                 break;
             case "hybrid":
             default:
@@ -285,7 +286,7 @@ public class PositionService {
         Map<Integer, Double> scoreMap = new HashMap<>();
         addWeightedScore(scoreMap, UserCF.recommend(userId, data), USERCF_WEIGHT);
         addWeightedScore(scoreMap, ItemCF.recommend(userId, data, RECOMMEND_LIMIT), ITEMCF_WEIGHT);
-        addWeightedScore(scoreMap, recommendByContent(userId, positions, collects, submits), CONTENT_WEIGHT);
+        addWeightedScore(scoreMap, recommendByContentBased(userId, positions), CONTENT_WEIGHT);
         return rankScoreMap(scoreMap);
     }
 
@@ -301,6 +302,17 @@ public class PositionService {
             double rankScore = positionIds.size() - i;
             scoreMap.merge(positionId, rankScore * weight, Double::sum);
         }
+    }
+
+    private List<Integer> recommendByContentBased(Integer userId, List<Position> positions) {
+        if (userId == null) {
+            return Collections.emptyList();
+        }
+        Resume resume = resumeMapper.selectById(userId);
+        if (resume == null) {
+            return Collections.emptyList();
+        }
+        return ContentBased.recommend(userId, positions, resume);
     }
 
     private List<Integer> recommendByContent(Integer userId, List<Position> positions, List<Collect> collects, List<Submit> submits) {

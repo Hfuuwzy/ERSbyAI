@@ -122,6 +122,10 @@ public class SubmitService {
         if (CollectionUtil.isEmpty(form.getIds()) || form.getStatus() == null) {
             return;
         }
+        Account currentUser = TokenUtils.getCurrentUser();
+        if (currentUser == null || !RoleEnum.EMPLOY.name().equals(currentUser.getRole())) {
+            return;
+        }
         submitMapper.updateBatch(form.getIds(), form.getStatus());
     }
 
