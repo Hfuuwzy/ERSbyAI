@@ -24,7 +24,21 @@ public class FileController {
 
     private static final Logger log = LoggerFactory.getLogger(FileController.class);
 
-    private static final String filePath = System.getProperty("user.dir") + "/files/";
+    // 修改为指向项目根目录的files文件夹
+    private static final String filePath = getProjectRootPath() + "/files/";
+    
+    /**
+     * 获取项目根目录路径
+     * 支持从springboot子目录或根目录启动
+     */
+    private static String getProjectRootPath() {
+        String userDir = System.getProperty("user.dir");
+        // 如果在springboot目录下，返回到父目录（项目根目录）
+        if (userDir.endsWith("springboot") || userDir.endsWith("springboot/") || userDir.endsWith("springboot\\")) {
+            return new java.io.File(userDir).getParent();
+        }
+        return userDir;
+    }
 
     @Value("${fileBaseUrl:}")
     private String fileBaseUrl;
@@ -58,8 +72,15 @@ public class FileController {
         OutputStream os;
         try {
             if (StrUtil.isNotEmpty(fileName)) {
-                response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
-                response.setContentType("application/octet-stream");
+                String contentType = getContentType(fileName);
+                response.setContentType(contentType);
+                
+                // 对于图片类型，不需要设置attachment，让浏览器直接显示
+                // 对于其他类型，设置为下载
+                if (!isImage(fileName)) {
+                    response.addHeader("Content-Disposition", "attachment;filename=" + URLEncoder.encode(fileName, StandardCharsets.UTF_8));
+                }
+                
                 byte[] bytes = FileUtil.readBytes(filePath + fileName);
                 os = response.getOutputStream();
                 os.write(bytes);
@@ -68,6 +89,42 @@ public class FileController {
             }
         } catch (Exception e) {
             log.warn("文件下载失败：" + fileName);
+        }
+    }
+
+    /**
+     * 判断是否为图片文件
+     */
+    private boolean isImage(String fileName) {
+        String lowerName = fileName.toLowerCase();
+        return lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg") || 
+               lowerName.endsWith(".png") || lowerName.endsWith(".gif") || 
+               lowerName.endsWith(".bmp") || lowerName.endsWith(".webp");
+    }
+
+    /**
+     * 根据文件名获取Content-Type
+     */
+    private String getContentType(String fileName) {
+        String lowerName = fileName.toLowerCase();
+        if (lowerName.endsWith(".jpg") || lowerName.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (lowerName.endsWith(".png")) {
+            return "image/png";
+        } else if (lowerName.endsWith(".gif")) {
+            return "image/gif";
+        } else if (lowerName.endsWith(".bmp")) {
+            return "image/bmp";
+        } else if (lowerName.endsWith(".webp")) {
+            return "image/webp";
+        } else if (lowerName.endsWith(".pdf")) {
+            return "application/pdf";
+        } else if (lowerName.endsWith(".doc")) {
+            return "application/msword";
+        } else if (lowerName.endsWith(".docx")) {
+            return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        } else {
+            return "application/octet-stream";
         }
     }
 
