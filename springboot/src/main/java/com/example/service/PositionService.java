@@ -203,194 +203,232 @@ public class PositionService {
     }
 
     /**
-     * 混合推荐算法 V2
-     * @param userId 用户ID
-     * @param strategy 推荐策略: usercf, itemcf, content, hybrid
-     * @return 推荐岗位列表
+     * 多策略岗位推荐：支持用户协同过滤、物品协同过滤、内容推荐和混合推荐
      */
     public List<Position> recommendV2(Integer userId, String strategy) {
-        // 获取所有岗位
-        List<Position> positions = positionMapper.selectAll(new Position());
-        // 获取用户简历
-        Resume resume = resumeMapper.selectByUserId(userId);
-        // 获取用户交互数据
-        List<Collect> collects = collectMapper.selectAll(new Collect());
-        List<Submit> submits = submitMapper.selectAll(new Submit());
-        List<User> users = userMapper.selectAll(new User());
+        List<User> users = safeList(userMapper.selectAll(new User()));
+        List<Position> positions = safeList(positionMapper.selectAll(new Position()));
+        List<Collect> collects = safeList(collectMapper.selectAll(new Collect()));
+        List<Submit> submits = safeList(submitMapper.selectAll(new Submit()));
+        List<RelateDTO> data = buildRelateData(users, positions, collects, submits);
+        Map<Integer, Position> positionMap = buildPositionMap(positions);
 
-        // 构建交互数据
-        ArrayList<RelateDTO> data = new ArrayList<>();
-        for (Position position : positions) {
-            Integer positionId = position.getId();
-            for (User user : users) {
-                Integer uid = user.getId();
-                int index = 1;
-                List<Collect> collectList = collects.stream()
-                    .filter(x -> x.getPositionId().equals(positionId) && x.getStudentId().equals(uid))
-                    .collect(Collectors.toList());
-                if (CollectionUtil.isNotEmpty(collectList)) {
-                    index += 1;
-                }
-                List<Submit> submitList = submits.stream()
-                    .filter(x -> x.getPositionId().equals(positionId) && x.getUserId().equals(uid))
-                    .collect(Collectors.toList());
-                if (CollectionUtil.isNotEmpty(submitList)) {
-                    index += 2;
-                }
-                if (index > 1) {
-                    data.add(new RelateDTO(uid, positionId, index));
-                }
-            }
+        String recommendStrategy = StrUtil.isBlank(strategy) ? "hybrid" : strategy.toLowerCase(Locale.ROOT);
+        List<Integer> positionIds;
+        switch (recommendStrategy) {
+            case "usercf":
+                positionIds = UserCF.recommend(userId, data);
+                break;
+            case "itemcf":
+                positionIds = ItemCF.recommend(userId, data, RECOMMEND_LIMIT);
+                break;
+            case "content":
+                positionIds = recommendByContent(userId, positions, collects, submits);
+                break;
+            case "hybrid":
+            default:
+                positionIds = recommendByHybrid(userId, positions, collects, submits, data);
+                break;
         }
 
-        Set<Integer> recommendedIds = new HashSet<>();
-
-        // 根据策略选择推荐算法
-        if ("usercf".equals(strategy)) {
-            recommendedIds.addAll(UserCF.recommend(userId, data));
-        } else if ("itemcf".equals(strategy)) {
-            recommendedIds.addAll(ItemCF.recommend(userId, data, 10));
-        } else if ("content".equals(strategy)) {
-            recommendedIds.addAll(ContentBased.recommend(userId, positions, resume));
-        } else { // hybrid
-            // 混合策略: 50% UserCF + 30% ItemCF + 20% Content
-            List<Integer> userCfIds = UserCF.recommend(userId, data);
-            List<Integer> itemCfIds = ItemCF.recommend(userId, data, 10);
-            List<Integer> contentIds = ContentBased.recommend(userId, positions, resume);
-
-            // 按比例合并
-            for (int i = 0; i < userCfIds.size() && i < 5; i++) {
-                recommendedIds.add(userCfIds.get(i));
-            }
-            for (int i = 0; i < itemCfIds.size() && i < 3; i++) {
-                recommendedIds.add(itemCfIds.get(i));
-            }
-            for (int i = 0; i < contentIds.size() && i < 2; i++) {
-                recommendedIds.add(contentIds.get(i));
-            }
-        }
-
-        // 转换为岗位列表
-        List<Position> result = positions.stream()
-            .filter(x -> recommendedIds.contains(x.getId()))
-            .collect(Collectors.toList());
-
-        // 如果推荐结果为空，随机推荐
+        List<Position> result = toPositions(positionIds, positionMap);
         if (CollectionUtil.isEmpty(result)) {
-            Collections.shuffle(positions);
-            result = positions.stream().limit(10).collect(Collectors.toList());
+            result = randomPositions(positions);
         }
-
         extracted(result);
         return result;
     }
 
-    public List<Position> recommendV2(Integer userId, String strategy) {
-        // 1. 获取所有岗位信息
-        List<Position> positions = positionMapper.selectAll(new Position());
-        if (CollectionUtil.isEmpty(positions)) {
-            return Collections.emptyList();
-        }
-
-        // 2. 获取用户简历信息
-        Resume resumeParam = new Resume();
-        resumeParam.setUserId(userId);
-        List<Resume> resumes = resumeMapper.selectAll(resumeParam);
-        Resume userResume = CollectionUtil.isNotEmpty(resumes) ? resumes.get(0) : null;
-
-        // 3. 获取所有用户和岗位交互数据
-        List<User> users = userMapper.selectAll(new User());
-        List<Collect> collects = collectMapper.selectAll(new Collect());
-        List<Submit> submits = submitMapper.selectAll(new Submit());
-        
+    private List<RelateDTO> buildRelateData(List<User> users, List<Position> positions, List<Collect> collects, List<Submit> submits) {
         ArrayList<RelateDTO> data = new ArrayList<>();
         for (Position position : positions) {
             Integer positionId = position.getId();
+            if (positionId == null) {
+                continue;
+            }
             for (User user : users) {
-                Integer uid = user.getId();
+                Integer relateUserId = user.getId();
+                if (relateUserId == null) {
+                    continue;
+                }
                 int index = 1;
-                List<Collect> collectList = collects.stream()
-                    .filter(x -> x.getPositionId().equals(positionId) && x.getStudentId().equals(uid))
-                    .collect(Collectors.toList());
-                if (CollectionUtil.isNotEmpty(collectList)) {
+                boolean hasCollect = collects.stream()
+                        .anyMatch(x -> positionId.equals(x.getPositionId()) && relateUserId.equals(x.getStudentId()));
+                if (hasCollect) {
                     index += 1;
                 }
-                List<Submit> submitList = submits.stream()
-                    .filter(x -> x.getPositionId().equals(positionId) && x.getUserId().equals(uid))
-                    .collect(Collectors.toList());
-                if (CollectionUtil.isNotEmpty(submitList)) {
+                boolean hasSubmit = submits.stream()
+                        .anyMatch(x -> positionId.equals(x.getPositionId()) && relateUserId.equals(x.getUserId()));
+                if (hasSubmit) {
                     index += 2;
                 }
                 if (index > 1) {
-                    data.add(new RelateDTO(uid, positionId, index));
+                    data.add(new RelateDTO(relateUserId, positionId, index));
                 }
             }
         }
+        return data;
+    }
 
-        // 4. 根据策略选择推荐算法
-        List<Integer> recommendedIds = new ArrayList<>();
-        
-        if ("usercf".equals(strategy)) {
-            // UserCF策略
-            recommendedIds = UserCF.recommend(userId, data);
-        } else if ("itemcf".equals(strategy)) {
-            // ItemCF策略
-            recommendedIds = ItemCF.recommend(userId, data, 10);
-        } else if ("content".equals(strategy)) {
-            // Content-Based策略
-            recommendedIds = ContentBased.recommend(userId, positions, userResume);
-        } else {
-            // Hybrid策略: 50% UserCF + 30% ItemCF + 20% Content
-            List<Integer> usercfIds = UserCF.recommend(userId, data);
-            List<Integer> itemcfIds = ItemCF.recommend(userId, data, 10);
-            List<Integer> contentIds = ContentBased.recommend(userId, positions, userResume);
-            
-            // 合并推荐结果
-            Map<Integer, Double> scores = new HashMap<>();
-            
-            // UserCF权重 0.5
-            for (int i = 0; i < usercfIds.size(); i++) {
-                double score = (usercfIds.size() - i) * 0.5;
-                scores.merge(usercfIds.get(i), score, Double::sum);
+    private Map<Integer, Position> buildPositionMap(List<Position> positions) {
+        Map<Integer, Position> positionMap = new LinkedHashMap<>();
+        for (Position position : positions) {
+            if (position.getId() != null) {
+                positionMap.put(position.getId(), position);
             }
-            
-            // ItemCF权重 0.3
-            for (int i = 0; i < itemcfIds.size(); i++) {
-                double score = (itemcfIds.size() - i) * 0.3;
-                scores.merge(itemcfIds.get(i), score, Double::sum);
+        }
+        return positionMap;
+    }
+
+    private List<Integer> recommendByHybrid(Integer userId, List<Position> positions, List<Collect> collects,
+                                            List<Submit> submits, List<RelateDTO> data) {
+        Map<Integer, Double> scoreMap = new HashMap<>();
+        addWeightedScore(scoreMap, UserCF.recommend(userId, data), USERCF_WEIGHT);
+        addWeightedScore(scoreMap, ItemCF.recommend(userId, data, RECOMMEND_LIMIT), ITEMCF_WEIGHT);
+        addWeightedScore(scoreMap, recommendByContent(userId, positions, collects, submits), CONTENT_WEIGHT);
+        return rankScoreMap(scoreMap);
+    }
+
+    private void addWeightedScore(Map<Integer, Double> scoreMap, List<Integer> positionIds, double weight) {
+        if (CollectionUtil.isEmpty(positionIds)) {
+            return;
+        }
+        for (int i = 0; i < positionIds.size(); i++) {
+            Integer positionId = positionIds.get(i);
+            if (positionId == null) {
+                continue;
             }
-            
-            // Content权重 0.2
-            for (int i = 0; i < contentIds.size(); i++) {
-                double score = (contentIds.size() - i) * 0.2;
-                scores.merge(contentIds.get(i), score, Double::sum);
+            double rankScore = positionIds.size() - i;
+            scoreMap.merge(positionId, rankScore * weight, Double::sum);
+        }
+    }
+
+    private List<Integer> recommendByContent(Integer userId, List<Position> positions, List<Collect> collects, List<Submit> submits) {
+        Set<Integer> interactedPositionIds = getInteractedPositionIds(userId, collects, submits);
+        if (interactedPositionIds.isEmpty()) {
+            return Collections.emptyList();
+        }
+        List<Position> interactedPositions = positions.stream()
+                .filter(x -> interactedPositionIds.contains(x.getId()))
+                .collect(Collectors.toList());
+        if (CollectionUtil.isEmpty(interactedPositions)) {
+            return Collections.emptyList();
+        }
+
+        Map<Integer, Double> scoreMap = new HashMap<>();
+        for (Position position : positions) {
+            Integer positionId = position.getId();
+            if (positionId == null || interactedPositionIds.contains(positionId)) {
+                continue;
             }
-            
-            // 排序取前10
-            recommendedIds = scores.entrySet().stream()
-                .sorted(Map.Entry.<Integer, Double>comparingByValue().reversed())
-                .limit(10)
+            double score = 0D;
+            for (Position interactedPosition : interactedPositions) {
+                score += contentScore(position, interactedPosition);
+            }
+            if (score > 0) {
+                scoreMap.put(positionId, score);
+            }
+        }
+        return rankScoreMap(scoreMap);
+    }
+
+    private Set<Integer> getInteractedPositionIds(Integer userId, List<Collect> collects, List<Submit> submits) {
+        Set<Integer> positionIds = new HashSet<>();
+        if (userId == null) {
+            return positionIds;
+        }
+        collects.stream()
+                .filter(x -> userId.equals(x.getStudentId()) && x.getPositionId() != null)
+                .map(Collect::getPositionId)
+                .forEach(positionIds::add);
+        submits.stream()
+                .filter(x -> userId.equals(x.getUserId()) && x.getPositionId() != null)
+                .map(Submit::getPositionId)
+                .forEach(positionIds::add);
+        return positionIds;
+    }
+
+    private double contentScore(Position position, Position interactedPosition) {
+        double score = 0D;
+        if (position.getIndustryId() != null && position.getIndustryId().equals(interactedPosition.getIndustryId())) {
+            score += 3;
+        }
+        if (sameText(position.getType(), interactedPosition.getType())) {
+            score += 2;
+        }
+        if (sameText(position.getEducation(), interactedPosition.getEducation())) {
+            score += 1;
+        }
+        if (sameText(position.getExperience(), interactedPosition.getExperience())) {
+            score += 1;
+        }
+
+        Set<String> positionTags = splitTags(position.getTags());
+        Set<String> interactedTags = splitTags(interactedPosition.getTags());
+        for (String tag : positionTags) {
+            if (interactedTags.contains(tag)) {
+                score += 2;
+            }
+        }
+        return score;
+    }
+
+    private boolean sameText(String first, String second) {
+        return StrUtil.isNotBlank(first) && first.equals(second);
+    }
+
+    private Set<String> splitTags(String tags) {
+        if (StrUtil.isBlank(tags)) {
+            return Collections.emptySet();
+        }
+        return Arrays.stream(tags.split(","))
+                .map(String::trim)
+                .filter(StrUtil::isNotBlank)
+                .collect(Collectors.toSet());
+    }
+
+    private List<Integer> rankScoreMap(Map<Integer, Double> scoreMap) {
+        if (scoreMap.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return scoreMap.entrySet().stream()
+                .sorted((a, b) -> {
+                    int result = Double.compare(b.getValue(), a.getValue());
+                    if (result != 0) {
+                        return result;
+                    }
+                    return a.getKey().compareTo(b.getKey());
+                })
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
+    }
+
+    private List<Position> toPositions(List<Integer> positionIds, Map<Integer, Position> positionMap) {
+        List<Position> result = new ArrayList<>();
+        Set<Integer> addedIds = new HashSet<>();
+        for (Integer positionId : positionIds) {
+            Position position = positionMap.get(positionId);
+            if (position != null && addedIds.add(positionId)) {
+                result.add(position);
+            }
+            if (result.size() >= RECOMMEND_LIMIT) {
+                break;
+            }
         }
-        
-        // 5. 转换为岗位信息
-        List<Position> result = positions.stream()
-            .filter(x -> recommendedIds.contains(x.getId()))
-            .collect(Collectors.toList());
-        
-        // 如果推荐结果不足，随机补充
-        if (result.size() < 3) {
-            List<Position> remaining = positions.stream()
-                .filter(x -> !recommendedIds.contains(x.getId()))
-                .collect(Collectors.toList());
-            Collections.shuffle(remaining);
-            int need = Math.min(3 - result.size(), remaining.size());
-            result.addAll(remaining.subList(0, need));
-        }
-        
-        extracted(result);
         return result;
+    }
+
+    private List<Position> randomPositions(List<Position> positions) {
+        List<Position> result = new ArrayList<>(positions);
+        Collections.shuffle(result);
+        if (result.size() > RECOMMEND_LIMIT) {
+            return result.subList(0, RECOMMEND_LIMIT);
+        }
+        return result;
+    }
+
+    private <T> List<T> safeList(List<T> list) {
+        return list == null ? Collections.emptyList() : list;
     }
 
     /**
